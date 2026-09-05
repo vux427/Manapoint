@@ -29,7 +29,6 @@
             BorderThickness="1"
             Padding="13,11"
             PointerPressed="OnDragArea"
-            PointerMoved="OnDragMove"
             PointerReleased="OnDragEnd">
 
         <Border.ContextMenu>

@@ -15,15 +15,8 @@ public partial class MainWindow : Window
 {
     private SettingsWindow? _settings;
 
-    /// <summary>自訂拖曳中：上次處理的客戶區座標。位移一律用「這次減上次」套到目前位置，錨定按住點會越算越偏。</summary>
-    private bool _moving;
-    private Point _lastClient;
-
-    /// <summary>上次處理的游標物理位置。視窗位移會在游標不動時產生假移動事件，位置沒變就跳過。</summary>
-    private double _lastPhysX;
-    private double _lastPhysY;
-
-    private readonly WindowSnap.Session _snap = new();
+    /// <summary>按住時的客戶區座標。放開時沒動過視為點擊，不觸發吸附。</summary>
+    private Point? _pressClient;
 
     /// <summary>掛在 Application 上的托盤圖示（GetIcons 只認 Application）。</summary>
     private static TrayIcon Tray => TrayIcon.GetIcons(App.Current!)!.First();
@@ -73,57 +66,28 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>無邊框視窗靠拖曳面板本身移動。右鍵留給選單。</summary>
+    /// <summary>
+    /// 無邊框視窗靠拖曳面板本身移動（系統原生拖曳才跟手）。右鍵留給選單。
+    /// 吸附只在放開瞬間做一次：拖曳中逐事件搬視窗又鈍又抖。
+    /// </summary>
     private void OnDragArea(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        if (sender is not Control area) return;
 
-        _lastClient = e.GetPosition(this);
-        _moving = true;
-        _snap.Reset();
-        var scaling = Screens.ScreenFromWindow(this)?.Scaling ?? 1.0;
-        _lastPhysX = Position.X + _lastClient.X * scaling;
-        _lastPhysY = Position.Y + _lastClient.Y * scaling;
-        e.Pointer.Capture(area);
-        e.Handled = true;
-    }
-
-    private void OnDragMove(object? sender, PointerEventArgs e)
-    {
-        if (!_moving) return;
-
-        // 客戶區差值是邏輯像素，乘縮放才是物理位移。
-        var scaling = Screens.ScreenFromWindow(this)?.Scaling ?? 1.0;
-        var current = e.GetPosition(this);
-        var physX = Position.X + current.X * scaling;
-        var physY = Position.Y + current.Y * scaling;
-
-        // 游標沒動（視窗被吸附位移產生的假事件）就不搬視窗；
-        // 但 _lastClient 仍要更新到新座標系，否則下次差值會混到兩個座標系。
-        if (physX == _lastPhysX && physY == _lastPhysY)
-        {
-            _lastClient = current;
-            return;
-        }
-
-        var pos = new PixelPoint(
-            Position.X + (int)Math.Round((current.X - _lastClient.X) * scaling),
-            Position.Y + (int)Math.Round((current.Y - _lastClient.Y) * scaling));
-        _lastClient = current;
-        _lastPhysX = physX;
-        _lastPhysY = physY;
-        Position = SnapToCorner(pos);
-        e.Handled = true;
+        _pressClient = e.GetPosition(this);
+        BeginMoveDrag(e);
     }
 
     private void OnDragEnd(object? sender, PointerReleasedEventArgs e)
     {
-        if (!_moving) return;
+        if (_pressClient is not { } pressed) return;
+        _pressClient = null;
 
-        _moving = false;
-        _snap.Reset();
-        e.Pointer.Capture(null);
+        var released = e.GetPosition(this);
+        var moved = Math.Abs(released.X - pressed.X) + Math.Abs(released.Y - pressed.Y);
+        if (moved <= 4) return; // 沒拖過，只是點擊
+
+        Position = SnapToCorner(Position);
     }
 
     /// <summary>把位置吸到目前螢幕工作區的角落／邊緣。尺寸需換算成物理像素。</summary>
@@ -136,7 +100,7 @@ public partial class MainWindow : Window
         var size = new PixelSize(
             (int)(Bounds.Width * scaling),
             (int)(Bounds.Height * scaling));
-        return _snap.Snap(pos, size, screen.WorkingArea);
+        return WindowSnap.Snap(pos, size, screen.WorkingArea);
     }
 
     /// <summary>

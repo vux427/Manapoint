@@ -11,9 +11,6 @@ public static class WindowSnap
 {
     public const int DefaultThreshold = 24;
 
-    /// <summary>已吸住後，要拉開「門檻＋這個距離」才脫鉤，避免在邊界抖動。</summary>
-    public const int ReleaseMargin = 10;
-
     /// <param name="pos">視窗左上角（物理像素）。</param>
     /// <param name="size">視窗尺寸（物理像素）。</param>
     /// <param name="area">工作區範圍（物理像素）。</param>
@@ -31,45 +28,5 @@ public static class WindowSnap
         var hiPos = hi - len;
         if (Math.Abs(raw - hiPos) <= threshold) return hiPos;
         return raw;
-    }
-
-    /// <summary>
-    /// 有記憶的吸附：吸住後小幅來回不會反覆吸放。
-    /// 另一個抖動源是視窗位移產生的假移動事件，那個由呼叫端
-    /// （游標物理位置沒變就不處理）擋掉，這裡只管黏性。
-    /// </summary>
-    public sealed class Session
-    {
-        private int? _x;
-        private int? _y;
-
-        public PixelPoint Snap(PixelPoint raw, PixelSize size, PixelRect area)
-        {
-            return new PixelPoint(
-                StickyAxis(raw.X, size.Width, area.X, area.Right, ref _x),
-                StickyAxis(raw.Y, size.Height, area.Y, area.Bottom, ref _y));
-        }
-
-        public void Reset()
-        {
-            _x = null;
-            _y = null;
-        }
-
-        private static int StickyAxis(int raw, int len, int lo, int hi, ref int? snapped)
-        {
-            if (snapped.HasValue)
-            {
-                if (Math.Abs(raw - snapped.Value) > DefaultThreshold + ReleaseMargin)
-                    snapped = null;
-                else
-                    return snapped.Value;
-            }
-
-            var next = SnapAxis(raw, len, lo, hi, DefaultThreshold);
-            if (next == lo || next == hi - len)
-                snapped = next;
-            return next;
-        }
     }
 }
