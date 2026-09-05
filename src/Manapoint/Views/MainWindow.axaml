@@ -49,7 +49,7 @@
                                 Spacing="2"
                                 Margin="0,1,0,4">
                         <Grid ColumnDefinitions="Auto,*,*,*,Auto"
-                              ColumnSpacing="7">
+                              ColumnSpacing="4">
                             <Border Grid.Column="0" Width="14" Height="14"
                                     CornerRadius="3"
                                     Background="{Binding BadgeBackground}"
@@ -74,7 +74,7 @@
                             <StackPanel Grid.Column="1"
                                         IsVisible="{Binding HasRolling}"
                                         Orientation="Horizontal"
-                                        Spacing="3"
+                                        Spacing="2"
                                         VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Rolling.ShortLabel}"
                                            FontSize="9"
@@ -89,7 +89,7 @@
                             <StackPanel Grid.Column="2"
                                         IsVisible="{Binding HasWeekly}"
                                         Orientation="Horizontal"
-                                        Spacing="3"
+                                        Spacing="2"
                                         VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Weekly.ShortLabel}"
                                            FontSize="9"
@@ -104,7 +104,7 @@
                             <StackPanel Grid.Column="3"
                                         IsVisible="{Binding HasMonthly}"
                                         Orientation="Horizontal"
-                                        Spacing="3"
+                                        Spacing="2"
                                         VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Monthly.ShortLabel}"
                                            FontSize="9"
