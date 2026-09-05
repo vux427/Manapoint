@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Text.Json;
 using Manapoint.Models;
 
 namespace Manapoint.Collectors;
@@ -22,7 +21,8 @@ public sealed class GrokCollector(HttpClient http) : IUsageCollector
 
     public async Task<ProviderUsage> CollectAsync(CancellationToken ct = default)
     {
-        var token = ReadAccessToken();
+        // access 過期會在這裡自動換發並寫回（政策唯一的例外，見 XaiTokenStore）。
+        var token = await XaiTokenStore.GetAccessTokenAsync(http, ct);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, BillingUrl);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -38,32 +38,5 @@ public sealed class GrokCollector(HttpClient http) : IUsageCollector
 
         var json = await response.Content.ReadAsStringAsync(ct);
         return GrokUsageParser.Parse(json, DateTimeOffset.UtcNow);
-    }
-
-    private static string ReadAccessToken()
-    {
-        var path = OpenCodeAuth.FilePath;
-        if (!File.Exists(path))
-            throw new ProviderNotReadyException("找不到 opencode，請先安裝並登入 xAI");
-
-        using var doc = JsonDocument.Parse(File.ReadAllText(path));
-
-        if (!doc.RootElement.TryGetProperty("xai", out var entry))
-            throw new ProviderNotReadyException("尚未登入 xAI，請在 opencode 登入");
-
-        if (entry.TryGetProperty("expires", out var expires)
-            && expires.ValueKind == JsonValueKind.Number
-            && DateTimeOffset.FromUnixTimeMilliseconds(expires.GetInt64()) <= DateTimeOffset.UtcNow)
-        {
-            // access token 壽命只有幾小時；opencode 下次執行時會自己換發，
-            // 所以這裡只是暫時拿不到，不需要使用者重新登入。
-            throw new ProviderNotReadyException("xAI 登入已過期，跑一下 opencode 即自動換發恢復");
-        }
-
-        var token = entry.TryGetProperty("access", out var access) ? access.GetString() : null;
-        if (string.IsNullOrWhiteSpace(token))
-            throw new ProviderNotReadyException("xAI 的登入資料不完整，請重新登入");
-
-        return token;
     }
 }

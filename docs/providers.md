@@ -108,10 +108,12 @@ Claude / Codex / Grok 三家的 endpoint 出處為 MIT 授權的
 
 Manapoint 只讀取使用者自己機器上、由各家官方 CLI 寫下的登入狀態。
 
-- **不換發 token。** 換發需要冒用該 CLI 的 OAuth client_id，並回寫別人的憑證檔。
-  對一個要交給他人使用的工具，這風險不該由使用者承擔。
+- **原則上不換發 token。** 換發需要該 CLI 的 OAuth client_id，並回寫別人的憑證檔。
   token 過期時保留上次數字並顯示指示，該 CLI 下次執行自動換發後即恢復，
   不需重新登入。
+- **唯一的例外：opencode xAI。** 用的是 opencode 開源碼內嵌的公開 Grok-CLI
+  client_id，只動同機同使用者的同一個 auth.json，並處理 refresh token 輪換
+  與並發寫入。其他家（Claude / Codex）仍維持不換發。
 - **不要求 API key 或密碼。**
 - **不寫出 token。** 快取檔與記錄檔都不含憑證。
 

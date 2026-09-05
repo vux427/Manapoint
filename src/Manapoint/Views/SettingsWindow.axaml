@@ -216,10 +216,6 @@
                       IsChecked="{Binding AutoStart, Mode=TwoWay}"
                       IsVisible="{Binding IsAutoStartSupported}"
                       VerticalAlignment="Center" />
-            <TextBlock Classes="hint"
-                       IsVisible="{Binding IsAutoStartSupported}"
-                       TextWrapping="Wrap"
-                       Text="寫入你這個使用者的啟動登錄，不需管理員權限；以目前執行的這個檔案註冊。" />
             <TextBlock Text="{Binding AutoStartError}"
                        IsVisible="{Binding HasAutoStartError}"
                        FontSize="10"
