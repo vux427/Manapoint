@@ -18,6 +18,12 @@ public sealed partial class ProviderCardViewModel(
     public bool IsTextStyle => settings.Theme.MeterStyle == MeterStyle.Text;
     public bool IsRowStyle => !IsTextStyle;
 
+    /// <summary>
+    /// 橫向排列時每張卡片鎖成面板寬，星號欄（長條圖）才有寬度依據；
+    /// 直向回傳 NaN 自動撐滿。版面切換走 PresentationChanged → Rerender → Notify。
+    /// </summary>
+    public double CardWidth => settings.IsHorizontalCards ? settings.PanelWidth : double.NaN;
+
     public bool HasBadgeIcon => descriptor.Badge.HasIcon;
     public Geometry? BadgeIcon => descriptor.Badge.IconPath is { } d ? Geometry.Parse(d) : null;
     public string? BadgeText => descriptor.Badge.Text;
@@ -99,6 +105,7 @@ public sealed partial class ProviderCardViewModel(
         OnPropertyChanged(nameof(HasNote));
         OnPropertyChanged(nameof(IsTextStyle));
         OnPropertyChanged(nameof(IsRowStyle));
+        OnPropertyChanged(nameof(CardWidth));
         OnPropertyChanged(nameof(Rolling));
         OnPropertyChanged(nameof(Weekly));
         OnPropertyChanged(nameof(Monthly));

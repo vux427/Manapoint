@@ -116,7 +116,7 @@ public sealed record AppTheme(
         Track: Color.Parse("#232D42"),
         Border: Color.Parse("#33405A"),
         MeterStyle.Segmented, MeterColoring.Status, ManaStatus,
-        SegmentRadius: 2.5, SegmentCells: 20, SegmentWidth: 3.5);
+        SegmentRadius: 2.5, SegmentCells: 10, SegmentWidth: 7);
 
     public static readonly AppTheme Terminal = new(
         "終端", "方塊分段，等寬字，磷光綠",

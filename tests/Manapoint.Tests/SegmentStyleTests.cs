@@ -4,14 +4,14 @@ using Manapoint.ViewModels;
 
 namespace Manapoint.Tests;
 
-/// <summary>血條走密集小方塊（參考 kcchien/claude-code-statusline 的密度），終端維持 10 格。</summary>
+/// <summary>魔力走藍色小方塊，終端維持原樣。格數邏輯共用主題參數。</summary>
 public class SegmentStyleTests
 {
     [Fact]
-    public void Vitals_UsesTwentyNarrowCells()
+    public void Vitals_UsesTenCells()
     {
-        Assert.Equal(20, AppTheme.Vitals.SegmentCells);
-        Assert.Equal(3.5, AppTheme.Vitals.SegmentWidth);
+        Assert.Equal(10, AppTheme.Vitals.SegmentCells);
+        Assert.Equal(7, AppTheme.Vitals.SegmentWidth);
     }
 
     [Fact]
@@ -25,14 +25,14 @@ public class SegmentStyleTests
         new(new UsageWindow(UsageWindowKind.Weekly, percent, null), AppTheme.Vitals);
 
     [Fact]
-    public void Vitals_RendersTwentySegments()
+    public void Vitals_RendersTenSegments()
     {
-        Assert.Equal(20, Window(35).Segments.Count);
+        Assert.Equal(10, Window(35).Segments.Count);
     }
 
     [Theory]
-    [InlineData(98, 20)]
-    [InlineData(50, 10)]
+    [InlineData(98, 10)]
+    [InlineData(50, 5)]
     [InlineData(3, 1)]
     [InlineData(0, 0)]
     public void Vitals_LitMathScalesWithCellCount(double percent, int expectedLit)

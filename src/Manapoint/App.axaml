@@ -9,6 +9,25 @@
         <local:ViewLocator />
     </Application.DataTemplates>
 
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <!-- 平常隱藏，最小化時才露出來當回家的路 -->
+            <TrayIcon Icon="/Assets/icon.png"
+                      ToolTipText="Manapoint"
+                      IsVisible="False"
+                      Clicked="OnTrayRestore">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="顯示面板" Click="OnTrayRestore" />
+                        <NativeMenuItemSeparator />
+                        <NativeMenuItem Header="設定…" Click="OnTraySettings" />
+                        <NativeMenuItem Header="結束" Click="OnTrayExit" />
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
+
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>
