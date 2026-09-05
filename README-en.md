@@ -51,6 +51,9 @@ cd ../..
 node --test manapoint-tauri/ui/*.test.mjs
 ```
 
+The release binary is about 4.7 MB (LTO, opt-level=z, stripped); rendering goes through the
+system WebView2, so no runtime is bundled.
+
 Requires Rust 1.82+ and Node 18+ (Node only runs the tests; the UI itself has zero npm
 dependencies). On Windows you also need the WebView2 runtime, which ships with Windows 11.
 

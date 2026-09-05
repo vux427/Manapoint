@@ -48,6 +48,9 @@ cd ../..
 node --test manapoint-tauri/ui/*.test.mjs
 ```
 
+發布版執行檔約 4.7 MB（LTO、opt-level=z、剝除符號），靠系統的 WebView2 算繪，
+不夾帶執行階段。
+
 需要 Rust 1.82+ 與 Node 18+（Node 只用來跑測試，介面本身沒有任何 npm 依賴）。
 Windows 另需 WebView2 執行階段，Windows 11 已內建。
 

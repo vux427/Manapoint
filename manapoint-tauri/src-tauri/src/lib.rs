@@ -296,10 +296,13 @@ fn restack_cards(app: &AppHandle, settings: &AppSettings) -> bool {
     let state = app.state::<AppState>();
     let wanted = enabled_descriptors(settings);
 
+    // Take a copy of the cache before touching `cards`, so no path ever holds both
+    // locks at once and lock ordering can never come back to bite.
+    let last_good = state.last_good.lock().expect("cache mutex poisoned").clone();
+
     let mut cards = state.cards.lock().expect("cards mutex poisoned");
     let known: HashMap<String, CardState> =
         cards.drain(..).map(|c| (c.id.clone(), c)).collect();
-    let last_good = state.last_good.lock().expect("cache mutex poisoned");
 
     let mut incomplete = false;
     *cards = wanted
