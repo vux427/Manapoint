@@ -7,8 +7,8 @@ namespace Manapoint.Collectors;
 
 /// <summary>
 /// 讀取 Codex 的 5 小時與每週用量。
-/// 憑證取自使用者自己的 Codex CLI 登入；本程式不換發 token，
-/// 過期時請使用者重新執行 codex 登入。詳見 docs/providers.md。
+/// 憑證取自使用者自己的 Codex CLI 登入；失效時保留上次數字並顯示指示。
+/// 詳見 docs/providers.md。
 /// </summary>
 public sealed class CodexCollector(HttpClient http) : IUsageCollector
 {

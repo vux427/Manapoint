@@ -7,8 +7,8 @@ namespace Manapoint.Collectors;
 
 /// <summary>
 /// 讀取 Claude Code 的 5 小時與每週用量。
-/// 憑證取自使用者自己的 Claude Code 登入，本程式不換發 token——
-/// 過期時請使用者回到 Claude Code 重新登入。詳見 docs/providers.md。
+/// 憑證取自使用者自己的 Claude Code 登入；過期時保留上次數字並顯示指示，
+/// Claude Code 下次執行換發後自動恢復。詳見 docs/providers.md。
 /// </summary>
 public sealed class ClaudeCodeCollector(HttpClient http) : IUsageCollector
 {

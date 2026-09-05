@@ -29,7 +29,7 @@ Built with C# + Avalonia 12, cross-platform (Windows / macOS / Linux).
 
 ## Features
 
-- Reads only the login state already written by each vendor's CLI on your machine. No API keys, no token refresh, no credential leakage.
+- Reads only the login state already written by each vendor's CLI on your machine. No API keys; expired tokens auto-refresh; no credential leakage.
 - Five panel styles: Graphite, Vitals, Terminal, Compact, Paper.
 - Reorder subscriptions by drag and drop in settings, with an insertion-line indicator.
 - Fetch failures show their reason instead of silently hiding.

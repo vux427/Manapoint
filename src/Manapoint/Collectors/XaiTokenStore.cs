@@ -18,10 +18,8 @@ public sealed record XaiEntry(string Type, string Access, string Refresh, long E
 /// 回傳 access_token（必填）、refresh_token（輪換，未必每次都給）、
 /// expires_in 秒數（缺席當 3600）。
 ///
-/// 這是憑證政策唯一的例外：只限 opencode xAI 這一組——同機同使用者、
-/// 寫回 opencode 自己管理的同一個檔案、client_id 是公開值。
-/// 並發換發造成舊 refresh token 被消費時，重讀檔案用贏家的那組，
-/// 只有檔案也救不回來才叫使用者重新登入。
+/// 只動同機同使用者的同一個 auth.json；並發換發造成舊 refresh token
+/// 被消費時，重讀檔案用贏家的那組，只有檔案也救不回來才叫使用者重新登入。
 /// </summary>
 public static class XaiTokenStore
 {

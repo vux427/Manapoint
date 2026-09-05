@@ -10,8 +10,8 @@ namespace Manapoint.Collectors;
 /// 憑證取自 opencode 儲存的 xAI OAuth 登入，不必另外安裝 Grok CLI。
 /// 注意 opencode 授權在某些帳號上月結額度為 0，但 credits 形狀的
 /// 每週點數池有數字，因此打 <c>?format=credits</c> 而非原形狀。
-/// 本程式不換發 token；access token 過期時 opencode 下次執行會自動換發，
-/// 每 5 分鐘重試即自動恢復。詳見 docs/providers.md。
+/// access token 過期自動換發並寫回（見 <see cref="XaiTokenStore"/>）。
+/// 詳見 docs/providers.md。
 /// </summary>
 public sealed class GrokCollector(HttpClient http) : IUsageCollector
 {
@@ -21,7 +21,7 @@ public sealed class GrokCollector(HttpClient http) : IUsageCollector
 
     public async Task<ProviderUsage> CollectAsync(CancellationToken ct = default)
     {
-        // access 過期會在這裡自動換發並寫回（政策唯一的例外，見 XaiTokenStore）。
+        // access 過期會在這裡自動換發並寫回（見 XaiTokenStore）。
         var token = await XaiTokenStore.GetAccessTokenAsync(http, ct);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, BillingUrl);
