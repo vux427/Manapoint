@@ -65,7 +65,7 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
 
 窗口類型**依 `limit_window_seconds` 判斷，不依欄位順序**：
 18000 秒為 5 小時、604800 秒為 7 天。`reset_at` 是 Unix 秒。
-部分方案沒有 `secondary_window`。
+部分方案沒有 5 小時窗口（premium）或沒有 `secondary_window`。讀不到的窗口直接略過。
 
 注意：回應含 email、user_id、account_id 等個資，解析時只取用量欄位，其餘不保留。
 

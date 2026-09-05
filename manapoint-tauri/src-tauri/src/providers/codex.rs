@@ -3,11 +3,14 @@
 //! Credentials come from the user's own Codex CLI login; when they lapse the card keeps
 //! its numbers and shows an instruction. The response carries account details such as an
 //! email address — only the usage fields are read, nothing else is retained.
+//!
+//! Premium plans have no five-hour window. A missing or unreadable window is omitted
+//! rather than failing the card.
 
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::Value;
 
-use super::{integer, number, object};
+use super::object;
 use crate::error::{CollectError, CollectResult};
 use crate::model::{ProviderUsage, UsageWindow, UsageWindowKind};
 use crate::paths;
@@ -43,31 +46,31 @@ pub fn parse(json: &str, collected_at: DateTime<Utc>) -> CollectResult<ProviderU
     let rate_limit = object(&root, "rate_limit", "Codex usage")?;
 
     let mut windows = Vec::with_capacity(2);
-    windows.push(
-        read_window(rate_limit, "primary_window")?
-            .ok_or_else(|| CollectError::failed("Codex usage 回應缺少 'primary_window'。"))?,
-    );
-
-    // Some plans have no second window.
-    if let Some(secondary) = read_window(rate_limit, "secondary_window")? {
+    if let Some(primary) = read_window(rate_limit, "primary_window") {
+        windows.push(primary);
+    }
+    if let Some(secondary) = read_window(rate_limit, "secondary_window") {
         windows.push(secondary);
+    }
+
+    if windows.is_empty() {
+        return Ok(ProviderUsage::with_note(
+            PROVIDER_NAME,
+            collected_at,
+            "此帳號沒有訂閱額度".into(),
+        ));
     }
 
     Ok(ProviderUsage::new(PROVIDER_NAME, windows, collected_at))
 }
 
-fn read_window(rate_limit: &Value, key: &str) -> CollectResult<Option<UsageWindow>> {
-    let Some(w) = rate_limit.get(key).filter(|v| !v.is_null()) else {
-        return Ok(None);
-    };
+/// Absent, null, or missing fields: skip the window. Premium has no five-hour cap.
+fn read_window(rate_limit: &Value, key: &str) -> Option<UsageWindow> {
+    let w = rate_limit.get(key).filter(|v| !v.is_null())?;
+    let seconds = w.get("limit_window_seconds").and_then(Value::as_i64)?;
+    let percent = w.get("used_percent").and_then(Value::as_f64)?;
 
-    let seconds = integer(w, "limit_window_seconds", "Codex usage")?;
-
-    Ok(Some(UsageWindow::new(
-        kind_for(seconds),
-        number(w, "used_percent", "Codex usage")?,
-        read_reset_at(w),
-    )))
+    Some(UsageWindow::new(kind_for(seconds), percent, read_reset_at(w)))
 }
 
 /// Classify by window length, not by field order — the two can be swapped.
@@ -205,15 +208,39 @@ mod tests {
         assert_eq!(1, parse(json, at()).unwrap().windows.len());
     }
 
+    /// Premium has no five-hour window; weekly in secondary still shows.
+    #[test]
+    fn allows_missing_primary_window() {
+        let json = r#"
+        {"rate_limit":{"primary_window":null,
+                       "secondary_window":{"used_percent":10,"limit_window_seconds":604800,"reset_at":1788756101}}}"#;
+
+        let usage = parse(json, at()).unwrap();
+
+        assert_eq!(vec![UsageWindowKind::Weekly], kinds(&usage));
+        assert_eq!(10.0, usage.windows[0].percent);
+    }
+
+    #[test]
+    fn skips_unreadable_window() {
+        let json = r#"
+        {"rate_limit":{"primary_window":{"limit_window_seconds":18000},
+                       "secondary_window":{"used_percent":10,"limit_window_seconds":604800,"reset_at":1788756101}}}"#;
+
+        assert_eq!(vec![UsageWindowKind::Weekly], kinds(&parse(json, at()).unwrap()));
+    }
+
+    #[test]
+    fn notes_when_no_windows() {
+        let usage = parse(r#"{"rate_limit":{"primary_window":null,"secondary_window":null}}"#, at()).unwrap();
+
+        assert!(usage.windows.is_empty());
+        assert_eq!(Some("此帳號沒有訂閱額度".to_string()), usage.note);
+    }
+
     #[test]
     fn fails_when_rate_limit_missing() {
         let err = parse(r#"{"plan_type":"team"}"#, at()).unwrap_err();
         assert!(err.message().contains("rate_limit"), "{}", err.message());
-    }
-
-    #[test]
-    fn fails_when_primary_window_missing() {
-        let err = parse(r#"{"rate_limit":{"secondary_window":null}}"#, at()).unwrap_err();
-        assert!(err.message().contains("primary_window"), "{}", err.message());
     }
 }
