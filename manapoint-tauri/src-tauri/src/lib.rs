@@ -431,6 +431,11 @@ fn open_settings(app: AppHandle) -> Result<(), String> {
         .title("Manapoint 設定")
         .inner_size(420.0, 640.0)
         .resizable(true)
+        // The OS-level file-drop handler swallows the webview's own drag events, which
+        // would leave the provider list impossible to reorder. Tauri's docs are explicit
+        // that turning it off is required for HTML5 drag and drop on Windows, and this
+        // window accepts no dropped files anyway.
+        .disable_drag_drop_handler()
         .build()
         .map(|_| ())
         .map_err(|e| e.to_string())
