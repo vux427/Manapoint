@@ -10,8 +10,15 @@ namespace Manapoint.ViewModels;
 /// <summary>外觀與服務偏好。變更即時反映到畫面並寫回設定檔。</summary>
 public sealed partial class SettingsViewModel : ViewModelBase
 {
-    /// <summary>低於此值，任何配色的文字對比都撐不住任意桌面背景。</summary>
-    public const double MinOpacity = 0.80;
+    /// <summary>
+    /// 保證可讀的下限。低於此值，文字對比在淺色桌面上就撐不住——
+    /// 這是算出來的，不是估的，ThemeContrastTests 以此為判準。
+    /// </summary>
+    public const double SafeOpacity = 0.80;
+
+    /// <summary>滑桿容許的最低值。介於此與 <see cref="SafeOpacity"/> 之間屬使用者自負風險。</summary>
+    public const double MinOpacity = 0.30;
+
     public const double MaxOpacity = 1.0;
 
     private readonly AppSettings _settings;
@@ -61,11 +68,15 @@ public sealed partial class SettingsViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(PanelBrush));
             OnPropertyChanged(nameof(OpacityText));
+            OnPropertyChanged(nameof(IsBelowSafeOpacity));
             Persist();
         }
     }
 
     public string OpacityText => $"{PanelOpacity * 100:0}%";
+
+    /// <summary>低於安全下限時提醒使用者，但不阻止。</summary>
+    public bool IsBelowSafeOpacity => PanelOpacity < SafeOpacity;
 
     // 面板底色套用不透明度；文字與強調色維持不透明，避免整體糊掉。
     public IBrush PanelBrush => new SolidColorBrush(Theme.Panel, PanelOpacity);

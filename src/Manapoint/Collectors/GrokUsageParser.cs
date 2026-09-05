@@ -30,7 +30,9 @@ public static class GrokUsageParser
         {
             return new ProviderUsage(
                 ProviderName, [], collectedAt,
-                Note: used > 0 ? $"本月已用 ${used:0.##}，未設額度上限" : "未設額度上限");
+                Note: used > 0
+                    ? $"本月已用 ${used:0.##}，此帳號未設額度上限"
+                    : "此帳號沒有 Grok 訂閱額度");
         }
 
         var window = new UsageWindow(

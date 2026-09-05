@@ -140,8 +140,13 @@
                 <TextBlock Grid.Column="1" Classes="hint" Text="{Binding OpacityText}" />
             </Grid>
             <Slider Value="{Binding PanelOpacity, Mode=TwoWay}"
-                    Minimum="0.80" Maximum="1.0"
+                    Minimum="0.30" Maximum="1.0"
                     SmallChange="0.05" LargeChange="0.1" />
+            <TextBlock IsVisible="{Binding IsBelowSafeOpacity}"
+                       FontSize="10"
+                       Foreground="#C97A2E"
+                       TextWrapping="Wrap"
+                       Text="低於 80% 之後，文字在淺色桌布上可能看不清楚。" />
         </StackPanel>
 
     </StackPanel>

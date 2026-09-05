@@ -41,7 +41,7 @@ public class ThemeContrastTests
             ("Status.Critical", theme.Status.Critical, GraphicRatio),
         })
         {
-            var worst = WorstCaseContrast(color, theme.Panel, SettingsViewModel.MinOpacity);
+            var worst = WorstCaseContrast(color, theme.Panel, SettingsViewModel.SafeOpacity);
 
             Assert.True(
                 worst >= required,
@@ -50,11 +50,18 @@ public class ThemeContrastTests
         }
     }
 
-    /// <summary>最低不透明度本身也是設計約束的一部分。</summary>
+    /// <summary>安全下限本身也是設計約束的一部分。</summary>
     [Fact]
-    public void OpacityFloorStaysWithinRange()
+    public void SafeOpacityStaysWithinRange()
     {
-        Assert.InRange(SettingsViewModel.MinOpacity, 0.5, SettingsViewModel.MaxOpacity);
+        Assert.InRange(SettingsViewModel.SafeOpacity, 0.5, SettingsViewModel.MaxOpacity);
+    }
+
+    /// <summary>滑桿可以低於安全下限，但那是使用者自負風險的區間。</summary>
+    [Fact]
+    public void SliderMayGoBelowSafeFloor()
+    {
+        Assert.True(SettingsViewModel.MinOpacity < SettingsViewModel.SafeOpacity);
     }
 
     private static double WorstCaseContrast(Color foreground, Color panel, double alpha)
