@@ -18,7 +18,12 @@ public sealed record UsageWindow(UsageWindowKind Kind, double Percent, DateTimeO
 }
 
 /// <summary>單一服務在各窗口的用量快照。</summary>
+/// <param name="Note">
+/// 沒有窗口可畫時的說明，例如帳號未設定額度上限。
+/// 這不是錯誤，因此與 <c>Error</c> 分開表示。
+/// </param>
 public sealed record ProviderUsage(
     string Provider,
     IReadOnlyList<UsageWindow> Windows,
-    DateTimeOffset CollectedAt);
+    DateTimeOffset CollectedAt,
+    string? Note = null);

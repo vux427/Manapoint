@@ -9,7 +9,8 @@ namespace Manapoint.ViewModels;
 /// <summary>外觀與服務偏好。變更即時反映到畫面並寫回設定檔。</summary>
 public sealed partial class SettingsViewModel : ViewModelBase
 {
-    public const double MinOpacity = 0.35;
+    /// <summary>低於此值，任何配色的文字對比都撐不住任意桌面背景。</summary>
+    public const double MinOpacity = 0.80;
     public const double MaxOpacity = 1.0;
 
     private readonly AppSettings _settings;
