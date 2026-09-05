@@ -45,12 +45,16 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>直／橫排列切換：換 ItemsPanel，橫向時寬度改隨內容自動調整。</summary>
+    /// <summary>
+    /// 直／橫排列切換。橫向只對精簡有效（一家一直欄）；
+    /// 量表卡橫排會拉成千像素寬條，不提供。
+    /// </summary>
     private void ApplyCardsPanel()
     {
         if (DataContext is not MainViewModel main) return;
 
-        var horizontal = main.Settings.IsHorizontalCards;
+        var horizontal = main.Settings.IsHorizontalCards
+            && main.Settings.Theme.MeterStyle == MeterStyle.Text;
         CardsList.ItemsPanel = horizontal
             ? new FuncTemplate<Panel?>(() => new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 })
             : new FuncTemplate<Panel?>(() => new StackPanel());

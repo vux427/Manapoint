@@ -45,8 +45,7 @@
         <ItemsControl x:Name="CardsList" ItemsSource="{Binding Cards}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:ProviderCardViewModel">
-                    <!-- 橫向排列時鎖成面板寬，星號欄才有寬度依據；直向 NaN 自動撐滿 -->
-                    <StackPanel Width="{Binding CardWidth}">
+                    <StackPanel>
 
                     <!-- 精簡直列：表格式一行一家，5h/7d/30d 各佔固定一欄，缺席留空才對得齊 -->
                     <StackPanel IsVisible="{Binding IsCompactVertical}"

@@ -25,14 +25,6 @@ public sealed partial class ProviderCardViewModel(
     public bool IsCompactVertical => IsTextStyle && !settings.IsHorizontalCards;
     public bool IsCompactHorizontal => IsTextStyle && settings.IsHorizontalCards;
 
-    /// <summary>
-    /// 橫向排列時每張卡片鎖成面板寬，星號欄（長條圖）才有寬度依據；
-    /// 直向或精簡橫向（欄寬隨內容）回傳 NaN 自動調整。
-    /// 版面切換走 PresentationChanged → Rerender → Notify。
-    /// </summary>
-    public double CardWidth =>
-        settings.IsHorizontalCards && IsRowStyle ? settings.PanelWidth : double.NaN;
-
     public bool HasBadgeIcon => descriptor.Badge.HasIcon;
     public Geometry? BadgeIcon => descriptor.Badge.IconPath is { } d ? Geometry.Parse(d) : null;
     public string? BadgeText => descriptor.Badge.Text;
@@ -116,7 +108,6 @@ public sealed partial class ProviderCardViewModel(
         OnPropertyChanged(nameof(IsRowStyle));
         OnPropertyChanged(nameof(IsCompactVertical));
         OnPropertyChanged(nameof(IsCompactHorizontal));
-        OnPropertyChanged(nameof(CardWidth));
         OnPropertyChanged(nameof(Rolling));
         OnPropertyChanged(nameof(Weekly));
         OnPropertyChanged(nameof(Monthly));
