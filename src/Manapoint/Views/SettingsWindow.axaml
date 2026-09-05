@@ -121,7 +121,7 @@
                 <TextBlock Grid.Column="1" Classes="hint" Text="{Binding OpacityText}" />
             </Grid>
             <Slider Value="{Binding PanelOpacity, Mode=TwoWay}"
-                    Minimum="0.15" Maximum="1.0"
+                    Minimum="0.35" Maximum="1.0"
                     SmallChange="0.05" LargeChange="0.1" />
         </StackPanel>
 

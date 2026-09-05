@@ -9,7 +9,7 @@ namespace Manapoint.ViewModels;
 /// <summary>外觀與服務偏好。變更即時反映到畫面並寫回設定檔。</summary>
 public sealed partial class SettingsViewModel : ViewModelBase
 {
-    public const double MinOpacity = 0.15;
+    public const double MinOpacity = 0.35;
     public const double MaxOpacity = 1.0;
 
     private readonly AppSettings _settings;
@@ -24,6 +24,12 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public SettingsViewModel()
     {
         _settings = SettingsStore.Load();
+        // 舊設定檔可能存有低於現行下限的值，載入時夾回範圍並寫回，
+        // 避免畫面與設定檔長期不一致。
+        var clamped = Math.Clamp(_settings.PanelOpacity, MinOpacity, MaxOpacity);
+        var needsRewrite = Math.Abs(clamped - _settings.PanelOpacity) > 0.001;
+        _settings.PanelOpacity = clamped;
+
         _enabled = [.. _settings.EnabledProviders ?? [.. ProviderRegistry.DefaultEnabled]];
 
         Theme = AppTheme.ByName(_settings.ThemeName);
@@ -31,6 +37,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
         Providers = [.. ProviderRegistry.All.Select(p => new ProviderToggleViewModel(p, this))];
 
         RefreshThemeSelection();
+
+        if (needsRewrite) Persist();
     }
 
     [ObservableProperty]
@@ -48,7 +56,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(PanelBrush));
             OnPropertyChanged(nameof(OpacityText));
-            OnPropertyChanged(nameof(HaloOpacity));
             Persist();
         }
     }
@@ -64,11 +71,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public IBrush TrackBrush => new SolidColorBrush(Theme.Track);
     public IBrush PanelBorderBrush => new SolidColorBrush(Theme.Border);
 
-    /// <summary>文字與圖形的暈影色，取面板底色，讓低透明度時仍能與桌面分離。</summary>
-    public Color HaloColor => Theme.Panel;
-
-    /// <summary>面板越透明，暈影就要越強才撐得住可讀性。</summary>
-    public double HaloOpacity => Math.Clamp(1.15 - PanelOpacity, 0.25, 0.95);
 
     public IReadOnlyList<string> EnabledProviderIds =>
         [.. ProviderRegistry.All.Where(p => _enabled.Contains(p.Id)).Select(p => p.Id)];
@@ -103,7 +105,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(TextMutedBrush));
         OnPropertyChanged(nameof(TrackBrush));
         OnPropertyChanged(nameof(PanelBorderBrush));
-        OnPropertyChanged(nameof(HaloColor));
     }
 
     private void Persist()

@@ -15,7 +15,7 @@
         Topmost="True"
         ShowInTaskbar="False"
         Background="Transparent"
-        TransparencyLevelHint="Transparent">
+        TransparencyLevelHint="AcrylicBlur, Blur, Transparent">
 
     <Design.DataContext>
         <vm:MainViewModel />
@@ -39,11 +39,6 @@
         </Border.ContextMenu>
 
         <ItemsControl ItemsSource="{Binding Cards}">
-            <ItemsControl.Effect>
-                <DropShadowEffect BlurRadius="7" OffsetX="0" OffsetY="0"
-                                  Color="{Binding Settings.HaloColor}"
-                                  Opacity="{Binding Settings.HaloOpacity}" />
-            </ItemsControl.Effect>
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:ProviderCardViewModel">
                     <StackPanel Spacing="6" Margin="0,0,0,4">
