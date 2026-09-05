@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Manapoint.Collectors;
+using Manapoint.Services;
 
 namespace Manapoint.ViewModels;
 
@@ -14,14 +14,14 @@ public sealed partial class MainViewModel : ViewModelBase
     private readonly List<(IUsageCollector Collector, ProviderCardViewModel Card)> _sources = [];
     private readonly DispatcherTimer _timer;
 
-    public ObservableCollection<ProviderCardViewModel> Cards { get; } = [];
+    public SettingsViewModel Settings { get; } = new();
 
-    [ObservableProperty]
-    public partial string StatusText { get; set; } = "尚未更新";
+    public ObservableCollection<ProviderCardViewModel> Cards { get; } = [];
 
     public MainViewModel()
     {
-        Register(new OpenCodeGoCollector(_http));
+        Settings.EnabledProvidersChanged += OnEnabledProvidersChanged;
+        RebuildSources();
 
         _timer = new DispatcherTimer { Interval = RefreshInterval };
         _timer.Tick += async (_, _) => await RefreshAsync();
@@ -30,11 +30,26 @@ public sealed partial class MainViewModel : ViewModelBase
         _ = RefreshAsync();
     }
 
-    private void Register(IUsageCollector collector)
+    private void OnEnabledProvidersChanged()
     {
-        var card = new ProviderCardViewModel(collector.ProviderName);
-        _sources.Add((collector, card));
-        Cards.Add(card);
+        RebuildSources();
+        _ = RefreshAsync();
+    }
+
+    private void RebuildSources()
+    {
+        _sources.Clear();
+        Cards.Clear();
+
+        foreach (var id in Settings.EnabledProviderIds)
+        {
+            var descriptor = ProviderRegistry.Get(id);
+            if (!descriptor.IsAvailable) continue;
+
+            var card = new ProviderCardViewModel(descriptor.Name);
+            _sources.Add((ProviderRegistry.CreateCollector(id, _http), card));
+            Cards.Add(card);
+        }
     }
 
     [RelayCommand]
@@ -59,7 +74,5 @@ public sealed partial class MainViewModel : ViewModelBase
                 card.Fail(ex.Message);
             }
         }
-
-        StatusText = $"更新於 {DateTime.Now:HH:mm}";
     }
 }

@@ -1,0 +1,159 @@
+using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Manapoint.Models;
+using Manapoint.Services;
+
+namespace Manapoint.ViewModels;
+
+/// <summary>外觀與服務偏好。變更即時反映到畫面並寫回設定檔。</summary>
+public sealed partial class SettingsViewModel : ViewModelBase
+{
+    public const double MinOpacity = 0.15;
+    public const double MaxOpacity = 1.0;
+
+    private readonly AppSettings _settings;
+    private readonly HashSet<string> _enabled;
+
+    /// <summary>勾選的服務有變動時觸發，讓主畫面重建卡片。</summary>
+    public event Action? EnabledProvidersChanged;
+
+    public IReadOnlyList<ThemeOptionViewModel> ThemeOptions { get; }
+    public IReadOnlyList<ProviderToggleViewModel> Providers { get; }
+
+    public SettingsViewModel()
+    {
+        _settings = SettingsStore.Load();
+        _enabled = [.. _settings.EnabledProviders ?? [.. ProviderRegistry.DefaultEnabled]];
+
+        Theme = AppTheme.ByName(_settings.ThemeName);
+        ThemeOptions = [.. AppTheme.All.Select(t => new ThemeOptionViewModel(t, this))];
+        Providers = [.. ProviderRegistry.All.Select(p => new ProviderToggleViewModel(p, this))];
+
+        RefreshThemeSelection();
+    }
+
+    [ObservableProperty]
+    public partial AppTheme Theme { get; set; }
+
+    public double PanelOpacity
+    {
+        get => _settings.PanelOpacity;
+        set
+        {
+            var clamped = Math.Clamp(value, MinOpacity, MaxOpacity);
+            if (Math.Abs(clamped - _settings.PanelOpacity) < 0.001) return;
+
+            _settings.PanelOpacity = clamped;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PanelBrush));
+            OnPropertyChanged(nameof(OpacityText));
+            Persist();
+        }
+    }
+
+    public string OpacityText => $"{PanelOpacity * 100:0}%";
+
+    // 面板底色套用不透明度；文字與強調色維持不透明，避免整體糊掉。
+    public IBrush PanelBrush => new SolidColorBrush(Theme.Panel, PanelOpacity);
+    public IBrush AccentBrush => new SolidColorBrush(Theme.Accent);
+    public IBrush TextPrimaryBrush => new SolidColorBrush(Theme.TextPrimary);
+    public IBrush TextSecondaryBrush => new SolidColorBrush(Theme.TextSecondary);
+    public IBrush TextMutedBrush => new SolidColorBrush(Theme.TextMuted);
+    public IBrush TrackBrush => new SolidColorBrush(Theme.Track);
+    public IBrush PanelBorderBrush => new SolidColorBrush(Theme.Border);
+
+    public IReadOnlyList<string> EnabledProviderIds =>
+        [.. ProviderRegistry.All.Where(p => _enabled.Contains(p.Id)).Select(p => p.Id)];
+
+    public bool IsEnabled(string id) => _enabled.Contains(id);
+
+    public void SetEnabled(string id, bool enabled)
+    {
+        var changed = enabled ? _enabled.Add(id) : _enabled.Remove(id);
+        if (!changed) return;
+
+        Persist();
+        EnabledProvidersChanged?.Invoke();
+    }
+
+    public void SelectTheme(AppTheme theme)
+    {
+        if (theme == Theme) return;
+
+        Theme = theme;
+        _settings.ThemeName = theme.Name;
+        Persist();
+        RefreshThemeSelection();
+    }
+
+    partial void OnThemeChanged(AppTheme value)
+    {
+        OnPropertyChanged(nameof(PanelBrush));
+        OnPropertyChanged(nameof(AccentBrush));
+        OnPropertyChanged(nameof(TextPrimaryBrush));
+        OnPropertyChanged(nameof(TextSecondaryBrush));
+        OnPropertyChanged(nameof(TextMutedBrush));
+        OnPropertyChanged(nameof(TrackBrush));
+        OnPropertyChanged(nameof(PanelBorderBrush));
+    }
+
+    private void Persist()
+    {
+        _settings.EnabledProviders = [.. EnabledProviderIds];
+        SettingsStore.Save(_settings);
+    }
+
+    private void RefreshThemeSelection()
+    {
+        foreach (var option in ThemeOptions)
+            option.Refresh();
+    }
+}
+
+/// <summary>設定頁的一個配色色票。</summary>
+public sealed partial class ThemeOptionViewModel(AppTheme theme, SettingsViewModel owner)
+    : ViewModelBase
+{
+    public string Name => theme.Name;
+    public IBrush Swatch => new SolidColorBrush(theme.Accent);
+    public IBrush Backdrop => new SolidColorBrush(theme.Panel);
+    public bool IsSelected => owner.Theme == theme;
+
+    [RelayCommand]
+    private void Select() => owner.SelectTheme(theme);
+
+    public void Refresh() => OnPropertyChanged(nameof(IsSelected));
+}
+
+/// <summary>設定頁的一個服務開關。</summary>
+public sealed partial class ProviderToggleViewModel : ViewModelBase
+{
+    private readonly ProviderDescriptor _descriptor;
+    private readonly SettingsViewModel _owner;
+
+    public ProviderToggleViewModel(ProviderDescriptor descriptor, SettingsViewModel owner)
+    {
+        _descriptor = descriptor;
+        _owner = owner;
+    }
+
+    public string Name => _descriptor.Name;
+    public bool IsAvailable => _descriptor.IsAvailable;
+
+    public string Hint => _descriptor.IsAvailable
+        ? _descriptor.CredentialHint
+        : "尚未支援";
+
+    public bool IsEnabled
+    {
+        get => _owner.IsEnabled(_descriptor.Id);
+        set
+        {
+            if (!_descriptor.IsAvailable) return;
+
+            _owner.SetEnabled(_descriptor.Id, value);
+            OnPropertyChanged();
+        }
+    }
+}

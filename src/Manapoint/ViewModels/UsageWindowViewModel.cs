@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+using Avalonia.Controls;
 using Manapoint.Models;
 
 namespace Manapoint.ViewModels;
@@ -17,6 +17,10 @@ public sealed partial class UsageWindowViewModel(UsageWindow window) : ViewModel
     public int Percent => window.Percent;
 
     public string PercentText => $"{window.Percent}%";
+
+    // 進度以兩欄星號比例呈現，避免 ProgressBar 模板的溢出問題。
+    public GridLength UsedStar => new(window.Percent, GridUnitType.Star);
+    public GridLength FreeStar => new(100 - window.Percent, GridUnitType.Star);
 
     /// <summary>距離重置的粗略倒數，例如 "4h" 或 "2d"。</summary>
     public string ResetsInText
