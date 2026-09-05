@@ -10,19 +10,41 @@ Four AI subscriptions, one floating panel.
 Manapoint is a Rust + Tauri 2 desktop widget that keeps opencode Go, Claude Code, Codex and Grok
 usage windows (5-hour / weekly / monthly) on screen. Right-click to refresh, open settings, or quit.
 
+## Download
+
+Grab `Manapoint.exe` from [Releases](https://github.com/vux427/Manapoint/releases), put it
+anywhere, double-click it. No installer, no admin rights, no .NET or Node to install first.
+
+Windows 11 already ships the WebView2 runtime it needs; on Windows 10 without it, the first
+run offers to install it.
+
+Clone the repo only if you want to change something — see Build and test below.
+
 ## Themes
 
 | Graphite | Vitals |
 |---|---|
-| ![](docs/images/theme-graphite.png) | ![](docs/images/theme-vitals.png) |
+| <img src="docs/images/theme-graphite.png" width="252"> | <img src="docs/images/theme-vitals.png" width="252"> |
 
-| Terminal | Compact |
+| Terminal | Paper |
 |---|---|
-| ![](docs/images/theme-terminal.png) | ![](docs/images/theme-compact.png) |
+| <img src="docs/images/theme-terminal.png" width="252"> | <img src="docs/images/theme-paper.png" width="252"> |
 
-| Paper |
+| Compact |
 |---|
-| ![](docs/images/theme-paper.png) |
+| <img src="docs/images/theme-compact.png" width="196"> |
+
+### Horizontal arrangement
+
+The Compact theme collapses all four providers onto a single row:
+
+<img src="docs/images/theme-compact-h.png" width="440">
+
+The other themes give each provider its own column, header on top:
+
+<img src="docs/images/theme-graphite-h.png" width="760">
+
+<img src="docs/images/theme-vitals-h.png" width="760">
 
 ## Features
 

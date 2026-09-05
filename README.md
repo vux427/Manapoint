@@ -10,19 +10,40 @@
 Manapoint 是基於 Rust + Tauri 2 開發的桌面小工具，常駐顯示 opencode Go、Claude Code、Codex、Grok
 的用量窗口（5 小時 / 每週 / 每月），右鍵可重新整理、開設定、結束。
 
+## 下載
+
+到 [Releases](https://github.com/vux427/Manapoint/releases) 抓 `Manapoint.exe`，放哪都行，
+雙擊就跑——不用安裝、不用管理員權限、不必先裝 .NET 或 Node。
+
+Windows 11 已內建需要的 WebView2 執行階段；Windows 10 若還沒有，第一次執行會提示安裝。
+
+想改東西才需要整包 clone，見下面的建置與測試。
+
 ## 風格一覽
 
 | 石墨 | 魔力 |
 |---|---|
-| ![](docs/images/theme-graphite.png) | ![](docs/images/theme-vitals.png) |
+| <img src="docs/images/theme-graphite.png" width="252"> | <img src="docs/images/theme-vitals.png" width="252"> |
 
-| 終端 | 精簡 |
+| 終端 | 紙白 |
 |---|---|
-| ![](docs/images/theme-terminal.png) | ![](docs/images/theme-compact.png) |
+| <img src="docs/images/theme-terminal.png" width="252"> | <img src="docs/images/theme-paper.png" width="252"> |
 
-| 紙白 |
+| 精簡 |
 |---|
-| ![](docs/images/theme-paper.png) |
+| <img src="docs/images/theme-compact.png" width="196"> |
+
+### 橫向排列
+
+精簡風格橫向時把四家壓成一列：
+
+<img src="docs/images/theme-compact-h.png" width="440">
+
+其他風格橫向時每家一欄，標題在上：
+
+<img src="docs/images/theme-graphite-h.png" width="760">
+
+<img src="docs/images/theme-vitals-h.png" width="760">
 
 ## 特色
 

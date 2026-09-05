@@ -24,3 +24,4 @@ Thumbs.db
 usage-snapshot.json
 settings.json
 *.env
+dist/
