@@ -27,19 +27,22 @@
             BorderBrush="{Binding Settings.PanelBorderBrush}"
             BorderThickness="1"
             Padding="13,11"
-            PointerPressed="OnDragArea">
+            PointerPressed="OnDragArea"
+            PointerMoved="OnDragMove"
+            PointerReleased="OnDragEnd">
 
         <Border.ContextMenu>
             <ContextMenu>
                 <MenuItem Header="重新整理" Command="{Binding RefreshCommand}" />
                 <Separator />
+                <MenuItem Header="最小化" Click="OnMinimize" />
                 <MenuItem Header="設定…" Click="OnOpenSettings" />
                 <Separator />
                 <MenuItem Header="結束" Click="OnExit" />
             </ContextMenu>
         </Border.ContextMenu>
 
-        <ItemsControl ItemsSource="{Binding Cards}">
+        <ItemsControl x:Name="CardsList" ItemsSource="{Binding Cards}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:ProviderCardViewModel">
                     <StackPanel>
@@ -225,7 +228,7 @@
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate DataType="vm:MeterSegmentViewModel">
-                                                        <Border Width="7" Height="7"
+                                                        <Border Width="{Binding Width}" Height="7"
                                                                 CornerRadius="{Binding Radius}"
                                                                 Background="{Binding Brush}" />
                                                     </DataTemplate>

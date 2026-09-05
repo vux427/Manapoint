@@ -12,7 +12,7 @@ Manapoint 是 基於C# + Avalonia 12( 支援 Windows / macOS / Linux）。) 開�
 
 ## 風格一覽
 
-| 石墨 | 血條 |
+| 石墨 | 魔力 |
 |---|---|
 | ![](docs/images/theme-graphite.png) | ![](docs/images/theme-vitals.png) |
 
@@ -30,6 +30,8 @@ Manapoint 是 基於C# + Avalonia 12( 支援 Windows / macOS / Linux）。) 開�
 - 五種面板風格：石墨、血條、終端、精簡、紙白
 - 訂閱顯示順序可在設定頁拖曳調整（有插入線指示）
 - 取數失敗時顯示原因，不靜默隱藏
+- 右鍵選單可最小化；拖曳面板會磁吸螢幕角落
+- 卡片直／橫排列可選（設定頁）
 
 ## 建置與測試
 

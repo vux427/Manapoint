@@ -13,7 +13,7 @@ Built with C# + Avalonia 12, cross-platform (Windows / macOS / Linux).
 
 ## Gallery
 
-| Graphite | Vitals |
+| Graphite | Mana |
 |---|---|
 | ![](docs/images/theme-graphite.png) | ![](docs/images/theme-vitals.png) |
 
@@ -33,6 +33,8 @@ Built with C# + Avalonia 12, cross-platform (Windows / macOS / Linux).
 - Five panel styles: Graphite, Vitals, Terminal, Compact, Paper.
 - Reorder subscriptions by drag and drop in settings, with an insertion-line indicator.
 - Fetch failures show their reason instead of silently hiding.
+- Minimize from the context menu; dragging snaps to screen corners.
+- Vertical / horizontal card layout (in settings).
 - Start on boot (Windows, toggle in settings, no admin rights needed).
 
 ## Build & Test

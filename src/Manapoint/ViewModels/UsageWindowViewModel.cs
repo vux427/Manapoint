@@ -71,14 +71,14 @@ public sealed partial class UsageWindowViewModel(UsageWindow window, AppTheme th
     {
         get
         {
-            var count = AppTheme.SegmentCount;
+            var count = theme.SegmentCells;
             var lit = (int)Math.Round(window.Percent / 100 * count);
             if (window.Percent > 0) lit = Math.Max(lit, 1);
             lit = Math.Clamp(lit, 0, count);
 
             return [.. Enumerable.Range(0, count)
                 .Select(i => new MeterSegmentViewModel(
-                    i < lit, FillBrush, TrackBrush, SegmentRadius))];
+                    i < lit, FillBrush, TrackBrush, SegmentRadius, theme.SegmentWidth))];
         }
     }
 
@@ -98,10 +98,11 @@ public sealed partial class UsageWindowViewModel(UsageWindow window, AppTheme th
     }
 }
 
-/// <summary>分段量表的一格。</summary>
+/// <summary>分段量表的一格。寬度跟著主題密度走，主畫面與設定頁預覽共用。</summary>
 public sealed class MeterSegmentViewModel(
-    bool isLit, IBrush fill, IBrush track, CornerRadius radius)
+    bool isLit, IBrush fill, IBrush track, CornerRadius radius, double width)
 {
     public IBrush Brush => isLit ? fill : track;
     public CornerRadius Radius => radius;
+    public double Width => width;
 }

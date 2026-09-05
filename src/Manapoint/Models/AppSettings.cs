@@ -1,9 +1,18 @@
 namespace Manapoint.Models;
 
+/// <summary>卡片排列方向。</summary>
+public enum CardLayout
+{
+    Vertical,
+    Horizontal,
+}
+
 /// <summary>持久化的使用者偏好。</summary>
 public sealed class AppSettings
 {
     public string ThemeName { get; set; } = AppTheme.Graphite.Name;
+
+    public CardLayout CardsLayout { get; set; } = CardLayout.Vertical;
 
     /// <summary>面板底色的不透明度，0.15–1.0。</summary>
     public double PanelOpacity { get; set; } = 0.85;

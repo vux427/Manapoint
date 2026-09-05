@@ -162,6 +162,35 @@ public sealed partial class SettingsViewModel : ViewModelBase
     partial void OnAutoStartErrorChanged(string? value) =>
         OnPropertyChanged(nameof(HasAutoStartError));
 
+    public bool IsVerticalCards => _settings.CardsLayout == CardLayout.Vertical;
+    public bool IsHorizontalCards => _settings.CardsLayout == CardLayout.Horizontal;
+
+    /// <summary>RadioButton 雙向綁定：只有勾選（true）才切換，取消勾選忽略。</summary>
+    public bool VerticalCardsSelected
+    {
+        get => IsVerticalCards;
+        set { if (value) SetCardsLayout(CardLayout.Vertical); }
+    }
+
+    public bool HorizontalCardsSelected
+    {
+        get => IsHorizontalCards;
+        set { if (value) SetCardsLayout(CardLayout.Horizontal); }
+    }
+
+    private void SetCardsLayout(CardLayout layout)
+    {
+        if (_settings.CardsLayout == layout) return;
+
+        _settings.CardsLayout = layout;
+        Persist();
+        OnPropertyChanged(nameof(VerticalCardsSelected));
+        OnPropertyChanged(nameof(HorizontalCardsSelected));
+        OnPropertyChanged(nameof(IsVerticalCards));
+        OnPropertyChanged(nameof(IsHorizontalCards));
+        PresentationChanged?.Invoke();
+    }
+
     public void SelectTheme(AppTheme theme)
     {
         if (theme == Theme) return;
@@ -223,16 +252,17 @@ public sealed partial class ThemeOptionViewModel(AppTheme theme, SettingsViewMod
     public IBrush PreviewMutedBrush => new SolidColorBrush(theme.TextMuted);
     public bool IsSelected => owner.Theme == theme;
 
-    /// <summary>色票上的預覽格子：亮起的用狀態色，示意這個主題的樣子。</summary>
+    /// <summary>色票上的預覽格子：亮起的用狀態色，示意這個主題的樣子。格密的主題預覽也排密一點。</summary>
     public IReadOnlyList<MeterSegmentViewModel> PreviewSegments =>
     [
-        .. Enumerable.Range(0, 5).Select(i => new MeterSegmentViewModel(
+        .. Enumerable.Range(0, theme.SegmentCells > 10 ? 8 : 5).Select(i => new MeterSegmentViewModel(
             i < 3,
             new SolidColorBrush(theme.Coloring == MeterColoring.Status
                 ? theme.Status.For(60)
                 : theme.Accent),
             new SolidColorBrush(theme.Track),
-            new CornerRadius(theme.SegmentRadius)))
+            new CornerRadius(theme.SegmentRadius),
+            theme.SegmentCells > 10 ? 5 : 9))
     ];
 
     [RelayCommand]

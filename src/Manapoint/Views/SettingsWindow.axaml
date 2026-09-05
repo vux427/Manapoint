@@ -190,7 +190,7 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate DataType="vm:MeterSegmentViewModel">
-                                                    <Border Width="9" Height="7"
+                                                     <Border Width="{Binding Width}" Height="7"
                                                             CornerRadius="{Binding Radius}"
                                                             Background="{Binding Brush}" />
                                                 </DataTemplate>
@@ -224,6 +224,17 @@
             <TextBlock Classes="hint"
                        IsVisible="{Binding !IsAutoStartSupported}"
                        Text="此平台不支援開機啟動。" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+            <TextBlock Classes="section" Text="排列方向" />
+            <StackPanel Orientation="Horizontal" Spacing="14">
+                <RadioButton Content="直向" GroupName="cardsDir"
+                             IsChecked="{Binding VerticalCardsSelected, Mode=TwoWay}" />
+                <RadioButton Content="橫向" GroupName="cardsDir"
+                             IsChecked="{Binding HorizontalCardsSelected, Mode=TwoWay}" />
+            </StackPanel>
+            <TextBlock Classes="hint" Text="橫向時面板寬度隨內容自動調整。" />
         </StackPanel>
 
         <StackPanel Spacing="4">

@@ -71,15 +71,24 @@ public sealed record AppTheme(
     bool Monospace = false,
     double SegmentRadius = 2.0,
     bool Brackets = false,
-    double PanelWidth = 252)
+    double PanelWidth = 252,
+    int SegmentCells = 10,
+    double SegmentWidth = 7)
 {
-    /// <summary>分段樣式的格數。</summary>
-    public const int SegmentCount = 10;
 
     private static readonly StatusColors DarkStatus = new(
         Good: Color.Parse("#4ADE80"),
         Warning: Color.Parse("#FBBF24"),
         Critical: Color.Parse("#F87171"));
+
+    /// <summary>
+    /// MP 配色：平常亮藍（滿魔），注意轉奧術紫（超載感），危險轉紅粉（低魔警告）。
+    /// 調色後請跑 ThemeContrastTests，圖形對比需 3:1。
+    /// </summary>
+    private static readonly StatusColors ManaStatus = new(
+        Good: Color.Parse("#38BDF8"),
+        Warning: Color.Parse("#A78BFA"),
+        Critical: Color.Parse("#FB7185"));
 
     private static readonly StatusColors LightStatus = new(
         Good: Color.Parse("#137839"),
@@ -98,15 +107,16 @@ public sealed record AppTheme(
         MeterStyle.Smooth, MeterColoring.Accent, DarkStatus);
 
     public static readonly AppTheme Vitals = new(
-        "血條", "分段方塊，依用量變色",
-        Panel: Color.Parse("#12151A"),
-        Accent: Color.Parse("#4ADE80"),
+        "魔力", "MP 藍條，耗魔轉色警示",
+        Panel: Color.Parse("#101622"),
+        Accent: Color.Parse("#38BDF8"),
         TextPrimary: Color.Parse("#E8EDF2"),
         TextSecondary: Color.Parse("#BFC8D2"),
         TextMuted: Color.Parse("#B3B9C1"),
-        Track: Color.Parse("#252A32"),
-        Border: Color.Parse("#39404A"),
-        MeterStyle.Segmented, MeterColoring.Status, DarkStatus, SegmentRadius: 2.5);
+        Track: Color.Parse("#232D42"),
+        Border: Color.Parse("#33405A"),
+        MeterStyle.Segmented, MeterColoring.Status, ManaStatus,
+        SegmentRadius: 2.5, SegmentCells: 20, SegmentWidth: 3.5);
 
     public static readonly AppTheme Terminal = new(
         "終端", "方塊分段，等寬字，磷光綠",
