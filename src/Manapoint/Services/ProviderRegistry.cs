@@ -13,10 +13,14 @@ public static class ProviderRegistry
 
     public static readonly IReadOnlyList<ProviderDescriptor> All =
     [
-        new(OpenCodeGo, "opencode Go", "opencode CLI 登入狀態", IsAvailable: true),
-        new(ClaudeCode, "Claude Code", "claude /login", IsAvailable: false),
-        new(Codex, "Codex", "Codex CLI 登入狀態", IsAvailable: false),
-        new(Grok, "Grok", "Grok CLI 登入狀態", IsAvailable: false),
+        new(OpenCodeGo, "opencode Go", "opencode CLI 登入狀態", IsAvailable: true,
+            ProviderBadge.Dark("oc", "#7C6BF5")),
+        new(ClaudeCode, "Claude Code", "Claude Code 登入狀態", IsAvailable: true,
+            ProviderBadge.Dark("C", "#D97757")),
+        new(Codex, "Codex", "Codex CLI 登入狀態", IsAvailable: false,
+            ProviderBadge.Dark("Cx", "#10A37F")),
+        new(Grok, "Grok", "Grok CLI 登入狀態", IsAvailable: false,
+            ProviderBadge.Light("G", "#E8E8E8")),
     ];
 
     /// <summary>預設開啟所有已實作的服務。</summary>
@@ -31,6 +35,7 @@ public static class ProviderRegistry
     public static IUsageCollector CreateCollector(string id, HttpClient http) => id switch
     {
         OpenCodeGo => new OpenCodeGoCollector(http),
+        ClaudeCode => new ClaudeCodeCollector(http),
         _ => throw new NotSupportedException($"{id} 的取數器尚未實作。"),
     };
 }

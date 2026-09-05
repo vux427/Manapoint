@@ -43,10 +43,24 @@
                 <DataTemplate DataType="vm:ProviderCardViewModel">
                     <StackPanel Spacing="6" Margin="0,0,0,4">
 
-                        <TextBlock Text="{Binding Provider}"
-                                   FontSize="10"
-                                   FontWeight="Bold"
-                                   Foreground="{Binding #Root.DataContext.Settings.TextPrimaryBrush}" />
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <Border Width="16" Height="16"
+                                    CornerRadius="4"
+                                    Background="{Binding BadgeBackground}"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="{Binding BadgeText}"
+                                           FontSize="8"
+                                           FontWeight="Bold"
+                                           Foreground="{Binding BadgeForeground}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="{Binding Provider}"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding #Root.DataContext.Settings.TextPrimaryBrush}" />
+                        </StackPanel>
 
                         <TextBlock Text="{Binding Error}"
                                    IsVisible="{Binding HasError}"

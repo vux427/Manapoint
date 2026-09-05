@@ -141,6 +141,10 @@ public sealed partial class ProviderToggleViewModel : ViewModelBase
     public string Name => _descriptor.Name;
     public bool IsAvailable => _descriptor.IsAvailable;
 
+    public string BadgeText => _descriptor.Badge.Text;
+    public IBrush BadgeBackground => new SolidColorBrush(_descriptor.Badge.Background);
+    public IBrush BadgeForeground => new SolidColorBrush(_descriptor.Badge.Foreground);
+
     public string Hint => _descriptor.IsAvailable
         ? _descriptor.CredentialHint
         : "尚未支援";

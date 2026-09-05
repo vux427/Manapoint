@@ -69,3 +69,17 @@ Claude / Codex / Grok 三家的 endpoint 出處為 MIT 授權的
 [RiahStudio/riah-usage](https://github.com/RiahStudio/riah-usage)
 （`collect-usage.js`、`lib/pull-claude.py`、`lib/parse-grok-billing.js`）。
 本專案為獨立實作，未複製其程式碼。
+
+---
+
+## 憑證政策
+
+Manapoint 只讀取使用者自己機器上、由各家官方 CLI 寫下的登入狀態。
+
+- **不換發 token。** 換發需要冒用該 CLI 的 OAuth client_id，並回寫別人的憑證檔。
+  對一個要交給他人使用的工具，這風險不該由使用者承擔。
+  token 過期時顯示指示，請使用者回到該 CLI 重新登入。
+- **不要求 API key 或密碼。**
+- **不寫出 token。** 快取檔與記錄檔都不含憑證。
+
+因此每個人在自己的機器上只會看到自己的用量，不需要 Manapoint 端的帳號系統。

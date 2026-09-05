@@ -31,10 +31,10 @@ public class OpenCodeGoUsageParserTests
     }
 
     [Theory]
-    [InlineData(0, 0)]
-    [InlineData(1, 15)]
-    [InlineData(2, 24)]
-    public void Parse_ReadsPercent(int index, int expected)
+    [InlineData(0, 0d)]
+    [InlineData(1, 15d)]
+    [InlineData(2, 24d)]
+    public void Parse_ReadsPercent(int index, double expected)
     {
         var usage = OpenCodeGoUsageParser.Parse(RealResponse, At);
         Assert.Equal(expected, usage.Windows[index].Percent);
@@ -54,7 +54,7 @@ public class OpenCodeGoUsageParserTests
     public void RemainingPercent_IsComplementOfPercent()
     {
         var usage = OpenCodeGoUsageParser.Parse(RealResponse, At);
-        Assert.Equal(85, usage.Windows[1].RemainingPercent);
+        Assert.Equal(85d, usage.Windows[1].RemainingPercent);
     }
 
     [Fact]

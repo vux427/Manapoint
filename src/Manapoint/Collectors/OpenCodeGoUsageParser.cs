@@ -36,7 +36,7 @@ public static class OpenCodeGoUsageParser
 
             windows.Add(new UsageWindow(
                 kind,
-                w.GetProperty("percent").GetInt32(),
+                w.GetProperty("percent").GetDouble(),
                 w.GetProperty("resetsAt").GetDateTimeOffset()));
         }
 

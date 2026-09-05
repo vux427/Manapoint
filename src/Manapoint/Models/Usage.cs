@@ -11,9 +11,10 @@ public enum UsageWindowKind
 
 /// <summary>單一重置窗口的已用比例與下次重置時間。</summary>
 /// <param name="Percent">已使用百分比，0–100。</param>
-public sealed record UsageWindow(UsageWindowKind Kind, int Percent, DateTimeOffset ResetsAt)
+/// <param name="ResetsAt">下次重置時間；服務未提供時為 null。</param>
+public sealed record UsageWindow(UsageWindowKind Kind, double Percent, DateTimeOffset? ResetsAt)
 {
-    public int RemainingPercent => 100 - Percent;
+    public double RemainingPercent => 100 - Percent;
 }
 
 /// <summary>單一服務在各窗口的用量快照。</summary>

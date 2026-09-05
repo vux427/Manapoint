@@ -34,16 +34,16 @@ public sealed class OpenCodeGoCollector(HttpClient http) : IUsageCollector
     {
         var path = AuthFilePath();
         if (!File.Exists(path))
-            throw new FileNotFoundException($"找不到 opencode 認證檔，請先執行 `opencode` 登入。", path);
+            throw new ProviderNotReadyException("找不到 opencode，請先安裝並登入");
 
         using var doc = JsonDocument.Parse(File.ReadAllText(path));
 
         if (!doc.RootElement.TryGetProperty("opencode-go", out var entry))
-            throw new InvalidOperationException("opencode 認證檔中沒有 opencode-go，請先訂閱並登入 Go。");
+            throw new ProviderNotReadyException("尚未登入 opencode Go");
 
         var key = entry.GetProperty("key").GetString();
         if (string.IsNullOrWhiteSpace(key))
-            throw new InvalidOperationException("opencode-go 的 key 為空。");
+            throw new ProviderNotReadyException("opencode Go 的登入資料不完整，請重新登入");
 
         return key;
     }

@@ -14,20 +14,26 @@ public sealed partial class UsageWindowViewModel(UsageWindow window) : ViewModel
         _ => throw new ArgumentOutOfRangeException(nameof(window)),
     };
 
-    public int Percent => window.Percent;
-
-    public string PercentText => $"{window.Percent}%";
+    /// <summary>未滿 1% 但已動用時顯示 &lt;1%，避免看起來完全沒用。</summary>
+    public string PercentText => window.Percent switch
+    {
+        0 => "0%",
+        < 1 => "<1%",
+        _ => $"{window.Percent:0}%",
+    };
 
     // 進度以兩欄星號比例呈現，避免 ProgressBar 模板的溢出問題。
     public GridLength UsedStar => new(window.Percent, GridUnitType.Star);
     public GridLength FreeStar => new(100 - window.Percent, GridUnitType.Star);
 
-    /// <summary>距離重置的粗略倒數，例如 "4h" 或 "2d"。</summary>
+    /// <summary>距離重置的粗略倒數，例如 "4h" 或 "2d"。服務未提供時留白。</summary>
     public string ResetsInText
     {
         get
         {
-            var left = window.ResetsAt - DateTimeOffset.UtcNow;
+            if (window.ResetsAt is not { } resetsAt) return "";
+
+            var left = resetsAt - DateTimeOffset.UtcNow;
             if (left <= TimeSpan.Zero) return "now";
             if (left.TotalHours < 1) return $"{(int)left.TotalMinutes}m";
             if (left.TotalDays < 1) return $"{(int)left.TotalHours}h";

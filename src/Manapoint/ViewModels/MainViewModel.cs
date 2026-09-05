@@ -46,7 +46,7 @@ public sealed partial class MainViewModel : ViewModelBase
             var descriptor = ProviderRegistry.Get(id);
             if (!descriptor.IsAvailable) continue;
 
-            var card = new ProviderCardViewModel(descriptor.Name);
+            var card = new ProviderCardViewModel(descriptor);
             _sources.Add((ProviderRegistry.CreateCollector(id, _http), card));
             Cards.Add(card);
         }
@@ -61,17 +61,18 @@ public sealed partial class MainViewModel : ViewModelBase
             {
                 card.Apply(await collector.CollectAsync());
             }
+            catch (ProviderNotReadyException ex)
+            {
+                // 訊息本身就是給使用者的指示，直接顯示。
+                card.Fail(ex.Message);
+            }
             catch (HttpRequestException ex)
             {
                 card.Fail($"連線失敗：{ex.StatusCode?.ToString() ?? ex.Message}");
             }
-            catch (FileNotFoundException)
+            catch (TaskCanceledException)
             {
-                card.Fail("未登入");
-            }
-            catch (InvalidOperationException ex)
-            {
-                card.Fail(ex.Message);
+                card.Fail("連線逾時");
             }
         }
     }
