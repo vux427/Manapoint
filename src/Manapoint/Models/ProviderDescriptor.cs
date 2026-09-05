@@ -30,9 +30,9 @@ public sealed record ProviderBadge(
 
     public bool HasIcon => IconPath is not null;
 
-    /// <summary>官方標誌，白色描繪於品牌色底。</summary>
-    public static ProviderBadge Icon(string iconPath, string background) =>
-        new(iconPath, null, Color.Parse(background), OnDark);
+    /// <summary>官方標誌描繪於品牌色底；淺色底需 <paramref name="darkGlyph"/>。</summary>
+    public static ProviderBadge Icon(string iconPath, string background, bool darkGlyph = false) =>
+        new(iconPath, null, Color.Parse(background), darkGlyph ? OnLight : OnDark);
 
     /// <summary>尚無標誌時的字母標記。</summary>
     public static ProviderBadge Monogram(string text, string background, bool darkText = false) =>

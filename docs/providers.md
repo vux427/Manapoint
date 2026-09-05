@@ -48,20 +48,42 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
 
 ## Codex
 
-待實作。
+已驗證（2026-09-05）。
 
-- 憑證：Codex CLI 的 `auth.json`
+- 憑證：`~/.codex/auth.json` → `tokens.access_token`、`tokens.account_id`
 - 請求：`GET https://chatgpt.com/backend-api/wham/usage`
-- 提供每週窗口；ChatGPT 有回傳時另含 5 小時
+- 認證：`Authorization: Bearer <access_token>` 加 `chatgpt-account-id: <account_id>`
+
+回傳（節錄，已略去帳號個資）：
+
+```json
+{ "rate_limit": {
+    "primary_window":   { "used_percent": 0,  "limit_window_seconds": 18000,  "reset_at": 1788617477 },
+    "secondary_window": { "used_percent": 98, "limit_window_seconds": 604800, "reset_at": 1788756101 }
+} }
+```
+
+窗口類型**依 `limit_window_seconds` 判斷，不依欄位順序**：
+18000 秒為 5 小時、604800 秒為 7 天。`reset_at` 是 Unix 秒。
+部分方案沒有 `secondary_window`。
+
+注意：回應含 email、user_id、account_id 等個資，解析時只取用量欄位，其餘不保留。
 
 ## Grok
 
-待實作。
+尚未驗證。
 
-- 憑證：Grok CLI 登入狀態
 - 請求：`GET https://cli-chat-proxy.grok.com/v1/billing`
         `GET https://cli-chat-proxy.grok.com/v1/user`
-- 提供每週窗口與各產品線拆分
+
+端點接受 bearer token（401 回應標示 `auth_kind=bearer`），但憑證來源未定：
+
+- **Grok CLI** — 原始設計假設的來源，本機未安裝，無法驗證。
+- **opencode 的 `xai` OAuth** — 存在於 `~/.local/share/opencode/auth.json`，
+  型別為 oauth。以過期 token 測試得到 401，無法判斷該憑證能否
+  通到 grok.com 的帳務介面；兩者可能屬於不同的產品面。
+
+需要有效 token 才能繼續。
 
 ---
 

@@ -11,17 +11,17 @@ public static class ProviderRegistry
     public const string Codex = "codex";
     public const string Grok = "grok";
 
+    // 三家的品牌色都偏黑，靠標誌形狀分辨即可；opencode 改用白底避免全黑一片。
     public static readonly IReadOnlyList<ProviderDescriptor> All =
     [
         new(OpenCodeGo, "opencode Go", "opencode CLI 登入狀態", IsAvailable: true,
-            ProviderBadge.Icon(ProviderIcons.OpenCode, "#0F0F0F")),
+            ProviderBadge.Icon(ProviderIcons.OpenCode, "#F2F2F2", darkGlyph: true)),
         new(ClaudeCode, "Claude Code", "Claude Code 登入狀態", IsAvailable: true,
             ProviderBadge.Icon(ProviderIcons.Claude, "#D97757")),
-        new(Codex, "Codex", "Codex CLI 登入狀態", IsAvailable: false,
+        new(Codex, "Codex", "Codex CLI 登入狀態", IsAvailable: true,
             ProviderBadge.Icon(ProviderIcons.OpenAI, "#000000")),
-        // xAI 的標誌尚未取得，先用字母標記。
         new(Grok, "Grok", "Grok CLI 登入狀態", IsAvailable: false,
-            ProviderBadge.Monogram("G", "#E8E8E8", darkText: true)),
+            ProviderBadge.Icon(ProviderIcons.Grok, "#1A1A1A")),
     ];
 
     /// <summary>預設開啟所有已實作的服務。</summary>
@@ -37,6 +37,7 @@ public static class ProviderRegistry
     {
         OpenCodeGo => new OpenCodeGoCollector(http),
         ClaudeCode => new ClaudeCodeCollector(http),
+        Codex => new CodexCollector(http),
         _ => throw new NotSupportedException($"{id} 的取數器尚未實作。"),
     };
 }
