@@ -11,6 +11,7 @@ public sealed partial class ProviderCardViewModel(
 {
     private ProviderUsage? _latest;
 
+    public string Id => descriptor.Id;
     public string Provider => descriptor.Name;
 
     /// <summary>精簡樣式把一家壓成一行，版面與其他樣式不同。</summary>

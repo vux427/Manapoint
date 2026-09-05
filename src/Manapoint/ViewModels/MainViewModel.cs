@@ -21,6 +21,7 @@ public sealed partial class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         Settings.EnabledProvidersChanged += OnEnabledProvidersChanged;
+        Settings.ProviderOrderChanged += OnProviderOrderChanged;
         Settings.PresentationChanged += OnPresentationChanged;
         RebuildSources();
 
@@ -41,6 +42,33 @@ public sealed partial class MainViewModel : ViewModelBase
     {
         RebuildSources();
         _ = RefreshAsync();
+    }
+
+    /// <summary>
+    /// 只有順序變動：沿用既有卡片調換位置，不重建、不重取數，畫面不閃。
+    /// 勾選集合變了才走 <see cref="OnEnabledProvidersChanged"/> 的重建路徑。
+    /// </summary>
+    private void OnProviderOrderChanged()
+    {
+        var order = Settings.EnabledProviderIds;
+        if (Cards.Count != order.Count || order.Any(id => Cards.All(c => c.Id != id)))
+        {
+            // 集合不一致時退回重建（理論上只調順序不會走到這裡）。
+            RebuildSources();
+            _ = RefreshAsync();
+            return;
+        }
+
+        var cardsById = Cards.ToDictionary(c => c.Id);
+        for (var i = 0; i < order.Count; i++)
+        {
+            var card = cardsById[order[i]];
+            var current = Cards.IndexOf(card);
+            if (current != i) Cards.Move(current, i);
+        }
+
+        var rank = order.Select((id, i) => (id, i)).ToDictionary(t => t.id, t => t.i);
+        _sources.Sort((a, b) => rank[a.Card.Id].CompareTo(rank[b.Card.Id]));
     }
 
     private void RebuildSources()

@@ -48,14 +48,25 @@
                                 CornerRadius="6"
                                 Padding="4,1"
                                 DragDrop.AllowDrop="True">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+                                </Transitions>
+                            </Border.Transitions>
                             <Grid RowDefinitions="Auto,Auto,Auto">
 
-                                <!-- 插入線：上面 -->
+                                <!-- 插入線：上面，高度 0/2 用過渡長出 -->
                                 <Border Grid.Row="0"
-                                        Height="2" CornerRadius="1"
+                                        Height="{Binding InsertBeforeHeight}"
+                                        CornerRadius="1"
                                         Margin="26,0,2,0"
-                                        Background="{Binding InsertionBrush}"
-                                        IsVisible="{Binding ShowInsertBefore}" />
+                                        Background="{Binding InsertionBrush}">
+                                    <Border.Transitions>
+                                        <Transitions>
+                                            <DoubleTransition Property="Height" Duration="0:0:0.15" />
+                                        </Transitions>
+                                    </Border.Transitions>
+                                </Border>
 
                                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
 
@@ -102,12 +113,18 @@
                                 </StackPanel>
                                 </StackPanel>
 
-                                <!-- 插入線：下面 -->
+                                <!-- 插入線：下面，高度 0/2 用過渡長出 -->
                                 <Border Grid.Row="2"
-                                        Height="2" CornerRadius="1"
+                                        Height="{Binding InsertAfterHeight}"
+                                        CornerRadius="1"
                                         Margin="26,0,2,0"
-                                        Background="{Binding InsertionBrush}"
-                                        IsVisible="{Binding ShowInsertAfter}" />
+                                        Background="{Binding InsertionBrush}">
+                                    <Border.Transitions>
+                                        <Transitions>
+                                            <DoubleTransition Property="Height" Duration="0:0:0.15" />
+                                        </Transitions>
+                                    </Border.Transitions>
+                                </Border>
                             </Grid>
                         </Border>
                     </DataTemplate>

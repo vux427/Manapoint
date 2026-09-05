@@ -28,6 +28,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>勾選的服務有變動時觸發，讓主畫面重建卡片。</summary>
     public event Action? EnabledProvidersChanged;
 
+    /// <summary>只有顯示順序變動時觸發，主畫面只重排卡片，不重建、不重取數。</summary>
+    public event Action? ProviderOrderChanged;
+
     /// <summary>主題換了要重畫，量表樣式與配色都由主題決定。</summary>
     public event Action? PresentationChanged;
 
@@ -116,7 +119,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
         Providers.Move(from, targetIndex);
         Persist();
-        EnabledProvidersChanged?.Invoke();
+        ProviderOrderChanged?.Invoke();
     }
 
     public bool IsEnabled(string id) => _enabled.Contains(id);
@@ -269,8 +272,8 @@ public sealed partial class ProviderToggleViewModel : ViewModelBase
             if (SetProperty(ref _isDropTarget, value))
             {
                 OnPropertyChanged(nameof(RowBackground));
-                OnPropertyChanged(nameof(ShowInsertBefore));
-                OnPropertyChanged(nameof(ShowInsertAfter));
+                OnPropertyChanged(nameof(InsertBeforeHeight));
+                OnPropertyChanged(nameof(InsertAfterHeight));
             }
         }
     }
@@ -284,14 +287,18 @@ public sealed partial class ProviderToggleViewModel : ViewModelBase
         {
             if (SetProperty(ref _dropAfter, value))
             {
-                OnPropertyChanged(nameof(ShowInsertBefore));
-                OnPropertyChanged(nameof(ShowInsertAfter));
+                OnPropertyChanged(nameof(InsertBeforeHeight));
+                OnPropertyChanged(nameof(InsertAfterHeight));
             }
         }
     }
 
-    public bool ShowInsertBefore => IsDropTarget && !DropAfter;
-    public bool ShowInsertAfter => IsDropTarget && DropAfter;
+    /// <summary>
+    /// 插入線高度：顯示 2px、隱藏 0px。
+    /// 用高度而不用顯示/隱藏，是為了讓 XAML 的 Height 過渡做出長出/收起的動畫。
+    /// </summary>
+    public double InsertBeforeHeight => IsDropTarget && !DropAfter ? 2 : 0;
+    public double InsertAfterHeight => IsDropTarget && DropAfter ? 2 : 0;
 
     public double RowOpacity => IsDragging ? 0.45 : 1.0;
 

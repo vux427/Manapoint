@@ -78,6 +78,11 @@ public partial class SettingsWindow : Window
                     provider.IsDropTarget = ReferenceEquals(provider, target);
             }
         }
+        else
+        {
+            // 懸停在列之間的空白處：沒有目標，不顯示插入線。
+            ClearDropTargets();
+        }
 
         e.Handled = true;
     }
@@ -106,14 +111,22 @@ public partial class SettingsWindow : Window
         ClearDropTargets();
         if (dragged is null || ReferenceEquals(dragged, target)) return;
 
-        // 插入點是「目標列之前或之後」；移除被拖列後下標前移，需扣回來。
         var from = settings.Providers.IndexOf(dragged);
-        var insertion = settings.Providers.IndexOf(target) + (insertAfter ? 1 : 0);
-        var to = insertion > from ? insertion - 1 : insertion;
+        var to = ResolveDropIndex(from, settings.Providers.IndexOf(target), insertAfter);
         if (to == from) return;
 
         settings.MoveProvider(dragged, to);
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// 把「目標列之前/之後」的插入點換算成移動後下標。
+    /// 移除被拖列後下標前移，需扣回來；純計算，方便單元測試。
+    /// </summary>
+    public static int ResolveDropIndex(int from, int targetIndex, bool insertAfter)
+    {
+        var insertion = targetIndex + (insertAfter ? 1 : 0);
+        return insertion > from ? insertion - 1 : insertion;
     }
 
     /// <summary>從事件來源往上找，第一個綁著服務的控制項就是放置目標。</summary>
