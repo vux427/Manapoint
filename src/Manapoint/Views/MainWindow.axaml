@@ -3,20 +3,116 @@
         xmlns:vm="using:Manapoint.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d"
         x:Class="Manapoint.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="Manapoint">
+        Title="Manapoint"
+        Width="260"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowDecorations="None"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Background="Transparent"
+        TransparencyLevelHint="AcrylicBlur, Blur, Transparent">
 
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <TextBox Text="{Binding Greeting}"
-             HorizontalAlignment="Center"
-             VerticalAlignment="Center" />
+    <Window.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#7A8290" />
+            <Setter Property="Width" Value="38" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.value">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Foreground" Value="#C8D0DA" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="Width" Value="30" />
+        </Style>
+        <Style Selector="TextBlock.reset">
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="Foreground" Value="#5C6470" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="Width" Value="26" />
+        </Style>
+        <Style Selector="TextBlock.provider">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#E4E9F0" />
+        </Style>
+    </Window.Styles>
 
+    <Border Background="#D91B1E24"
+            CornerRadius="10"
+            BorderBrush="#26FFFFFF"
+            BorderThickness="1"
+            Padding="12,10"
+            PointerPressed="OnDragArea">
+
+        <StackPanel Spacing="10">
+
+            <ItemsControl ItemsSource="{Binding Cards}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:ProviderCardViewModel">
+                        <StackPanel Spacing="5">
+                            <TextBlock Classes="provider" Text="{Binding Provider}" />
+
+                            <TextBlock Text="{Binding Error}"
+                                       IsVisible="{Binding HasError}"
+                                       FontSize="10"
+                                       Foreground="#D97070"
+                                       TextWrapping="Wrap" />
+
+                            <ItemsControl ItemsSource="{Binding Windows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:UsageWindowViewModel">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                                              Margin="0,0,0,4">
+                                            <TextBlock Grid.Column="0"
+                                                       Classes="label"
+                                                       Text="{Binding Label}" />
+
+                                            <Border Grid.Column="1"
+                                                    Height="4"
+                                                    CornerRadius="2"
+                                                    Background="#22FFFFFF"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,8,0">
+                                                <ProgressBar Value="{Binding Percent}"
+                                                             Minimum="0" Maximum="100"
+                                                             Height="4"
+                                                             CornerRadius="2"
+                                                             Background="Transparent"
+                                                             Foreground="#6FA8DC" />
+                                            </Border>
+
+                                            <TextBlock Grid.Column="2"
+                                                       Classes="value"
+                                                       Text="{Binding PercentText}" />
+                                            <TextBlock Grid.Column="3"
+                                                       Classes="reset"
+                                                       Text="{Binding ResetsInText}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="{Binding StatusText}"
+                       FontSize="8"
+                       Foreground="#4A515C"
+                       HorizontalAlignment="Right" />
+
+        </StackPanel>
+    </Border>
 </Window>
