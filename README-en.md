@@ -9,6 +9,22 @@ Usage of four AI subscriptions, all in one floating panel.
 Manapoint is an Avalonia desktop widget that keeps opencode Go, Claude Code, Codex and Grok
 usage windows (5-hour / weekly / monthly) always visible. Right-click to refresh, open settings, or quit.
 
+Built with C# + Avalonia 12, cross-platform (Windows / macOS / Linux).
+
+## Gallery
+
+| Graphite | Vitals |
+|---|---|
+| ![](docs/images/theme-graphite.png) | ![](docs/images/theme-vitals.png) |
+
+| Terminal | Compact |
+|---|---|
+| ![](docs/images/theme-terminal.png) | ![](docs/images/theme-compact.png) |
+
+| Paper |
+|---|
+| ![](docs/images/theme-paper.png) |
+
 [中文版](README.md)
 
 ## Features

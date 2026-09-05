@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Net;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using Manapoint.Collectors;
@@ -101,6 +102,11 @@ public sealed partial class MainViewModel : ViewModelBase
             {
                 // 訊息本身就是給使用者的指示，直接顯示。
                 card.Fail(ex.Message);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                // 被限流不洗掉上次數字（多半是一分鐘內打太多次，下一輪就會好）。
+                card.MarkStale("請求太頻繁，顯示上次數字，稍後自動重試");
             }
             catch (HttpRequestException ex)
             {

@@ -9,6 +9,22 @@
 Manapoint 是 Avalonia 桌面小工具，常駐顯示 opencode Go、Claude Code、Codex、Grok
 的用量窗口（5 小時 / 每週 / 每月），右鍵可重新整理、開設定、結束。
 
+C# + Avalonia 12 寫成，可跨平台執行（Windows / macOS / Linux）。
+
+## 風格一覽
+
+| 石墨 | 血條 |
+|---|---|
+| ![](docs/images/theme-graphite.png) | ![](docs/images/theme-vitals.png) |
+
+| 終端 | 精簡 |
+|---|---|
+| ![](docs/images/theme-terminal.png) | ![](docs/images/theme-compact.png) |
+
+| 紙白 |
+|---|
+| ![](docs/images/theme-paper.png) |
+
 [English version](README-en.md)
 
 ## 特色

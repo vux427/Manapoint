@@ -48,7 +48,7 @@
                     <StackPanel IsVisible="{Binding IsTextStyle}"
                                 Spacing="2"
                                 Margin="0,1,0,4">
-                        <Grid ColumnDefinitions="Auto,*,*,*,Auto"
+                        <Grid ColumnDefinitions="Auto,*,*,*"
                               ColumnSpacing="4">
                             <Border Grid.Column="0" Width="14" Height="14"
                                     CornerRadius="3"
@@ -70,6 +70,15 @@
                                                VerticalAlignment="Center" />
                                 </Panel>
                             </Border>
+
+                            <!-- 取不到數字時的佔位，靠左貼 logo；與數字欄互斥，不會重疊 -->
+                            <TextBlock Grid.Column="1"
+                                       Text="—"
+                                       IsVisible="{Binding HasNote}"
+                                       FontSize="10"
+                                       VerticalAlignment="Center"
+                                       ToolTip.Tip="{Binding Note}"
+                                       Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
 
                             <StackPanel Grid.Column="1"
                                         IsVisible="{Binding HasRolling}"
@@ -116,13 +125,6 @@
                                            Foreground="{Binding Monthly.FillBrush}" />
                             </StackPanel>
 
-                            <TextBlock Grid.Column="4"
-                                       Text="—"
-                                       IsVisible="{Binding HasNote}"
-                                       FontSize="10"
-                                       VerticalAlignment="Center"
-                                       ToolTip.Tip="{Binding Note}"
-                                       Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
                         </Grid>
 
                         <TextBlock Text="{Binding Error}"

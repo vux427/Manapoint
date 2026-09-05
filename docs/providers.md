@@ -71,30 +71,27 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
 
 ## Grok
 
-已驗證（2026-09-05）。
+已驗證（2026-09-05，credits 形狀 2026-09-06）。
 
 - 憑證：`~/.local/share/opencode/auth.json` → `xai.access`
   **不需要安裝 Grok CLI**——opencode 的 xAI OAuth token 可直接通到
   grok.com 的帳務介面，這點是實測確認的。
-- 請求：`GET https://cli-chat-proxy.grok.com/v1/billing`
+- 請求：`GET https://cli-chat-proxy.grok.com/v1/billing?format=credits`
 - 認證：`Authorization: Bearer <access>`
+  加 `x-xai-token-auth: xai-grok-cli` 與 `accept: application/json`
+ （Grok CLI 本身也是這組 header）
 
-回傳（節錄）：
+回傳的 `config` 有兩種訊號，兩種都吃：
 
-```json
-{ "config": {
-    "monthlyLimit": { "val": 0 },
-    "used": { "val": 0 },
-    "billingPeriodStart": "2026-09-01T00:00:00+00:00",
-    "billingPeriodEnd":   "2026-10-01T00:00:00+00:00",
-    "history": [ ... ]
-} }
-```
+- credits 形狀：`creditUsagePercent` 為每週點數池已用百分比，
+  重置時間先看 `currentPeriod.end`，沒有才退回 `billingPeriodEnd`。
+  實測確認：opencode 授權在某些帳號上月結額度為 0，
+  但這個每週百分比有數字——這就是之前顯示「沒有額度」的原因：
+  舊版只問了月結形狀。
+- 原形狀：`monthlyLimit.val`／`used.val`（皆包在 `{ "val": n }` 裡）。
+  只有 `monthlyLimit > 0` 才算得出比例，此時多顯示一欄 MONTH。
 
-**Grok 只有月結額度，沒有滾動或每週窗口。** 代理上只存在
-`/v1/user`、`/v1/billing`、`/v1/models` 三個端點，其餘皆 404。
-
-`monthlyLimit` 為 0 的帳號無從計算比例，此時顯示說明文字而非畫一條 0%。
+兩種訊號都沒有時顯示說明文字而非畫一條 0%。
 
 注意：`/v1/user` 回應含 email、姓名、userId 等個資，本專案不呼叫該端點。
 

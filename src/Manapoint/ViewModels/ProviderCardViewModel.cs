@@ -62,6 +62,24 @@ public sealed partial class ProviderCardViewModel(
         Notify();
     }
 
+    /// <summary>
+    /// 暫時性失敗（例如被限流）：留著上次數字，只加一行說明，
+    /// 下次取數成功會自動蓋掉。完全沒拿過資料才比照 <see cref="Fail"/>。
+    /// </summary>
+    public void MarkStale(string message)
+    {
+        if (_latest is null)
+        {
+            Fail(message);
+            return;
+        }
+
+        Error = null;
+        Note = message;
+        OnPropertyChanged(nameof(HasError));
+        OnPropertyChanged(nameof(HasNote));
+    }
+
     /// <summary>主題換了要重畫，量表樣式與配色都跟著主題走。</summary>
     public void Rerender()
     {
