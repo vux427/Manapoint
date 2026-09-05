@@ -48,8 +48,8 @@
                     <!-- 橫向排列時鎖成面板寬，星號欄才有寬度依據；直向 NaN 自動撐滿 -->
                     <StackPanel Width="{Binding CardWidth}">
 
-                    <!-- 精簡樣式：表格式一行一家，5h/7d/30d 各佔固定一欄，缺席留空才對得齊 -->
-                    <StackPanel IsVisible="{Binding IsTextStyle}"
+                    <!-- 精簡直列：表格式一行一家，5h/7d/30d 各佔固定一欄，缺席留空才對得齊 -->
+                    <StackPanel IsVisible="{Binding IsCompactVertical}"
                                 Spacing="2"
                                 Margin="0,1,0,4">
                         <Grid ColumnDefinitions="Auto,*,*,*"
@@ -134,6 +134,91 @@
                         <TextBlock Text="{Binding Error}"
                                    IsVisible="{Binding HasError}"
                                    FontSize="9"
+                                   TextWrapping="Wrap"
+                                   Foreground="#E08A8A" />
+                    </StackPanel>
+
+                    <!-- 精簡橫向：一家一直欄，標誌在上、數字往下排 -->
+                    <StackPanel IsVisible="{Binding IsCompactHorizontal}"
+                                Spacing="3"
+                                Margin="0,1,0,2"
+                                HorizontalAlignment="Center">
+                        <Border Width="14" Height="14"
+                                CornerRadius="3"
+                                Background="{Binding BadgeBackground}"
+                                HorizontalAlignment="Center">
+                            <Panel>
+                                <Path Data="{Binding BadgeIcon}"
+                                      IsVisible="{Binding HasBadgeIcon}"
+                                      Fill="{Binding BadgeForeground}"
+                                      Stretch="Uniform"
+                                      Width="9" Height="9"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding BadgeText}"
+                                           IsVisible="{Binding !HasBadgeIcon}"
+                                           FontSize="7" FontWeight="Bold"
+                                           Foreground="{Binding BadgeForeground}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Panel>
+                        </Border>
+
+                        <StackPanel IsVisible="{Binding HasRolling}"
+                                    Orientation="Horizontal"
+                                    Spacing="3"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Rolling.ShortLabel}"
+                                       Width="20"
+                                       FontSize="9"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
+                            <TextBlock Text="{Binding Rolling.PercentText}"
+                                       FontSize="10"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding Rolling.FillBrush}" />
+                        </StackPanel>
+
+                        <StackPanel IsVisible="{Binding HasWeekly}"
+                                    Orientation="Horizontal"
+                                    Spacing="3"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Weekly.ShortLabel}"
+                                       Width="20"
+                                       FontSize="9"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
+                            <TextBlock Text="{Binding Weekly.PercentText}"
+                                       FontSize="10"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding Weekly.FillBrush}" />
+                        </StackPanel>
+
+                        <StackPanel IsVisible="{Binding HasMonthly}"
+                                    Orientation="Horizontal"
+                                    Spacing="3"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Monthly.ShortLabel}"
+                                       Width="20"
+                                       FontSize="9"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
+                            <TextBlock Text="{Binding Monthly.PercentText}"
+                                       FontSize="10"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding Monthly.FillBrush}" />
+                        </StackPanel>
+
+                        <TextBlock Text="—"
+                                   IsVisible="{Binding HasNote}"
+                                   FontSize="10"
+                                   HorizontalAlignment="Center"
+                                   ToolTip.Tip="{Binding Note}"
+                                   Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
+                        <TextBlock Text="{Binding Error}"
+                                   IsVisible="{Binding HasError}"
+                                   FontSize="9"
+                                   MaxWidth="80"
                                    TextWrapping="Wrap"
                                    Foreground="#E08A8A" />
                     </StackPanel>

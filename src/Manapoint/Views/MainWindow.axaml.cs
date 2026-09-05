@@ -6,6 +6,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Manapoint.Models;
 using Manapoint.Services;
 using Manapoint.ViewModels;
 
