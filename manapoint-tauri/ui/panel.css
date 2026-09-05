@@ -1,0 +1,382 @@
+/* Panel stylesheet: all layout lives here so XAML-like churn stays in one file. */
+/* The real panel never gets markup from this file; panel.js owns the DOM. */
+
+/* The OS window is transparent and undecorated, so any opaque root shows as a rectangle. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* Keep measurement honest: the Rust side resizes the window to the rendered size. */
+#panel,
+#panel *,
+.panel,
+.panel * {
+  box-sizing: border-box;
+}
+
+/* Panel chrome: rounded, bordered, padded. Opacity applies to the background only, */
+/* so text stays solid; CSS opacity would fade everything and is not used here. */
+#panel,
+.panel {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 13px 11px;
+  background-color: var(--panel);
+  background-color: color-mix(in srgb, var(--panel) calc(var(--panel-alpha) * 100%), transparent);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 10px;
+  line-height: 1.35;
+  overflow: hidden;
+}
+
+/* Monospace themes (terminal, compact) override whatever --font carries. */
+#panel[data-mono="true"],
+.panel[data-mono="true"] {
+  font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+}
+
+/* Shrink-wrap: vertical has a fixed theme width, horizontal follows content width. */
+#panel[data-layout="vertical"],
+.panel[data-layout="vertical"] {
+  width: var(--panel-width);
+}
+
+#panel[data-layout="horizontal"],
+.panel[data-layout="horizontal"] {
+  width: max-content;
+}
+
+/* Reset inner defaults so no stray margin becomes a visible window gap. */
+#panel h2,
+.panel h2,
+#panel p,
+.panel p,
+#panel ul,
+.panel ul,
+#panel li,
+.panel li,
+#panel header,
+.panel header {
+  margin: 0;
+  padding: 0;
+}
+
+#panel ul,
+.panel ul {
+  list-style: none;
+}
+
+/* Cards container: vertical stacks, horizontal rows. */
+#panel #cards,
+.panel #cards {
+  display: flex;
+  min-width: 0;
+}
+
+#panel[data-layout="vertical"] #cards,
+.panel[data-layout="vertical"] #cards {
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Meter themes in horizontal mode: one fixed-width column per provider. */
+#panel[data-layout="horizontal"][data-meter="smooth"] #cards,
+.panel[data-layout="horizontal"][data-meter="smooth"] #cards,
+#panel[data-layout="horizontal"][data-meter="segmented"] #cards,
+.panel[data-layout="horizontal"][data-meter="segmented"] #cards {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Compact horizontal: every provider shares ONE single row, split into segments. */
+#panel[data-layout="horizontal"][data-meter="text"] #cards,
+.panel[data-layout="horizontal"][data-meter="text"] #cards {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+}
+
+/* Meter cards: header on top, meters stacked below. */
+#panel .card,
+.panel .card {
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#panel[data-layout="horizontal"][data-meter="smooth"] #cards .card,
+.panel[data-layout="horizontal"][data-meter="smooth"] #cards .card,
+#panel[data-layout="horizontal"][data-meter="segmented"] #cards .card,
+.panel[data-layout="horizontal"][data-meter="segmented"] #cards .card {
+  flex: none;
+  width: var(--panel-width);
+}
+
+/* Compact dividers use borders between segments, not extra elements. */
+#panel[data-layout="horizontal"][data-meter="text"] #cards .card + .card,
+.panel[data-layout="horizontal"][data-meter="text"] #cards .card + .card {
+  border-left: 1px solid var(--border);
+  margin-left: 10px;
+  padding-left: 10px;
+}
+
+/* Card header: badge plus provider name. */
+#panel .card__head,
+.panel .card__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+#panel .card__name,
+.panel .card__name {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#panel .card__error,
+.panel .card__error {
+  font-size: 10px;
+  color: #E08A8A;
+  overflow-wrap: break-word;
+}
+
+#panel .card__note,
+.panel .card__note {
+  font-size: 10px;
+  color: var(--text-muted);
+  overflow-wrap: break-word;
+}
+
+/* Meters list: one row per window. */
+#panel .meters,
+.panel .meters {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Fixed grid keeps label / bar / value / countdown columns aligned across rows. */
+#panel .meter,
+.panel .meter {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 36px 26px;
+  align-items: center;
+  min-width: 0;
+}
+
+#panel .meter__label,
+.panel .meter__label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#panel .meter__track,
+.panel .meter__track {
+  height: 5px;
+  border-radius: 2.5px;
+  background: var(--track);
+  overflow: hidden;
+  margin-right: 9px;
+  min-width: 0;
+}
+
+/* Width comes from the inline style panel.js sets; no transition so refreshes snap. */
+#panel .meter__fill,
+.panel .meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--meter-fill);
+}
+
+#panel .meter__cells,
+.panel .meter__cells {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 9px;
+  min-width: 0;
+}
+
+/* <i> defaults to italic; cells are blocks, not text. */
+#panel .cell,
+.panel .cell {
+  display: inline-block;
+  flex: none;
+  font-style: normal;
+  width: var(--segment-width);
+  height: 7px;
+  border-radius: var(--segment-radius);
+  background: var(--track);
+}
+
+#panel .cell.is-lit,
+.panel .cell.is-lit {
+  background: var(--meter-fill);
+}
+
+#panel .meter__bracket,
+.panel .meter__bracket {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* Value keeps the number right-aligned; alert glyph takes the meter colour. */
+#panel .meter__value,
+.panel .meter__value {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+#panel .meter__alert,
+.panel .meter__alert {
+  font-weight: 700;
+  color: var(--meter-fill);
+}
+
+/* Empty alerts (accent themes, non-critical meters) must not add spacing. */
+#panel .meter__alert:empty,
+.panel .meter__alert:empty {
+  display: none;
+}
+
+#panel .meter__alert:not(:empty),
+.panel .meter__alert:not(:empty) {
+  margin-right: 2px;
+}
+
+#panel .meter__reset,
+.panel .meter__reset {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Badge: centred glyph on the provider colour. */
+#panel .badge,
+.panel .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  background: var(--badge-bg);
+  color: var(--badge-fg);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+#panel .badge__icon,
+.panel .badge__icon {
+  display: block;
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
+}
+
+/* Compact cards use a smaller badge. */
+#panel .card--compact .badge,
+.panel .card--compact .badge {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  font-size: 7px;
+}
+
+#panel .card--compact .badge__icon,
+.panel .card--compact .badge__icon {
+  width: 9px;
+  height: 9px;
+}
+
+/* Compact vertical: one row per provider with three fixed columns, */
+/* so numbers line up across providers even when a window is missing. */
+#panel[data-layout="vertical"][data-meter="text"] #cards .card--compact,
+.panel[data-layout="vertical"][data-meter="text"] #cards .card--compact {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr 1fr;
+  column-gap: 4px;
+  row-gap: 2px;
+  align-items: center;
+}
+
+/* Errors in compact vertical drop below the row and span it. */
+#panel[data-layout="vertical"][data-meter="text"] #cards .card--compact .card__error,
+.panel[data-layout="vertical"][data-meter="text"] #cards .card--compact .card__error {
+  grid-column: 1 / -1;
+  font-size: 9px;
+}
+
+/* Compact horizontal: badge and slots share one line sized to content. */
+#panel[data-layout="horizontal"][data-meter="text"] #cards .card--compact,
+.panel[data-layout="horizontal"][data-meter="text"] #cards .card--compact {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+#panel[data-layout="horizontal"][data-meter="text"] #cards .card--compact .card__error,
+.panel[data-layout="horizontal"][data-meter="text"] #cards .card--compact .card__error {
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+/* Slots: short label plus percentage; empty slots keep their column in vertical mode. */
+#panel .compact__slot,
+.panel .compact__slot {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+#panel .compact__slot i,
+.panel .compact__slot i {
+  font-style: normal;
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+#panel .compact__slot b,
+.panel .compact__slot b {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 10px;
+  color: var(--meter-fill);
+}
+
+#panel .compact__note,
+.panel .compact__note {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}

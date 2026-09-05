@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manapoint 設定</title>
+  <link rel="stylesheet" href="./settings.css" />
+</head>
+<body>
+  <main id="settings">
+    <p id="error" class="error" role="alert" hidden></p>
+
+    <section id="section-theme" aria-labelledby="heading-theme">
+      <h2 id="heading-theme">配色</h2>
+      <div id="theme-list" role="group" aria-label="配色"></div>
+    </section>
+
+    <section id="section-layout" aria-labelledby="heading-layout">
+      <h2 id="heading-layout">卡片排列</h2>
+      <div class="radio-row">
+        <label><input type="radio" id="layout-vertical" name="cards-layout" value="Vertical" />直向</label>
+        <label><input type="radio" id="layout-horizontal" name="cards-layout" value="Horizontal" />橫向</label>
+      </div>
+    </section>
+
+    <section id="section-opacity" aria-labelledby="heading-opacity">
+      <h2 id="heading-opacity">面板不透明度</h2>
+      <div class="opacity-row">
+        <input type="range" id="opacity" min="0.30" max="1" step="0.01" aria-label="面板不透明度" />
+        <span id="opacity-value" class="hint"></span>
+      </div>
+      <p id="opacity-warning" class="warning" hidden>「低於 80% 時，淺色桌面上的文字可能看不清楚」</p>
+    </section>
+
+    <section id="section-providers" aria-labelledby="heading-providers">
+      <h2 id="heading-providers">顯示的服務</h2>
+      <p class="hint">拖曳左側握把可調整顯示順序，拖曳時會顯示插入位置。</p>
+      <ul id="provider-list"></ul>
+    </section>
+
+    <section id="section-autostart" aria-labelledby="heading-autostart">
+      <h2 id="heading-autostart">開機啟動</h2>
+      <label><input type="checkbox" id="autostart" />開機時自動啟動 Manapoint</label>
+      <p id="autostart-error" class="error" hidden></p>
+    </section>
+  </main>
+  <script type="module" src="./settings.js"></script>
+</body>
+</html>

@@ -1,19 +1,18 @@
 # Manapoint
+[繁體中文](README.md)
 
-> As an Agentic engineer with superpowers, Mana is the source of your power — keep it under control at all times.
+> As an agentic engineer with superpowers, mana is where those powers come from. You need to keep an eye on it.
 
 ![Manapoint](docs/images/screenshot.webp)
 
-Usage of four AI subscriptions, all in one floating panel.
+Four AI subscriptions, one floating panel.
 
-Manapoint is an Avalonia desktop widget that keeps opencode Go, Claude Code, Codex and Grok
-usage windows (5-hour / weekly / monthly) always visible. Right-click to refresh, open settings, or quit.
+Manapoint is a Rust + Tauri 2 desktop widget that keeps opencode Go, Claude Code, Codex and Grok
+usage windows (5-hour / weekly / monthly) on screen. Right-click to refresh, open settings, or quit.
 
-Built with C# + Avalonia 12, cross-platform (Windows / macOS / Linux).
+## Themes
 
-## Gallery
-
-| Graphite | Mana |
+| Graphite | Vitals |
 |---|---|
 | ![](docs/images/theme-graphite.png) | ![](docs/images/theme-vitals.png) |
 
@@ -25,28 +24,50 @@ Built with C# + Avalonia 12, cross-platform (Windows / macOS / Linux).
 |---|
 | ![](docs/images/theme-paper.png) |
 
-[中文版](README.md)
-
 ## Features
 
-- Reads only the login state already written by each vendor's CLI on your machine. No API keys; expired tokens auto-refresh; no credential leakage.
-- Five panel styles: Graphite, Vitals, Terminal, Compact, Paper.
-- Reorder subscriptions by drag and drop in settings, with an insertion-line indicator.
-- Fetch failures show their reason instead of silently hiding.
-- Minimize from the context menu; dragging snaps to screen corners.
-- Vertical / horizontal card layout (in settings).
-- Start on boot (Windows, toggle in settings, no admin rights needed).
+- Reads the login state your CLIs already have. No API key required, expired tokens are
+  refreshed automatically, and no credential is ever written out
+- Five panel themes: Graphite, Vitals, Terminal, Compact, Paper
+- Vertical and horizontal arrangements, each theme designed for both (the Compact theme
+  collapses to a single row when horizontal)
+- Drag to reorder providers in the settings window, with an insertion line
+- Live edge and corner snapping while you drag — it grips when you get close and lets go
+  the moment you pull away, so it never fights your hand
+- Failures explain themselves and keep the last known numbers instead of going blank
+- Minimise to the tray from the context menu; optional start-at-login
 
-## Build & Test
+## Build and test
 
 ```sh
-dotnet build src/Manapoint/Manapoint.csproj
-dotnet test tests/Manapoint.Tests/Manapoint.Tests.csproj
+# Rust side: collectors, window, snapping
+cd manapoint-tauri/src-tauri
+cargo test
+cargo run                 # dev run
+cargo build --release     # size-optimised binary
+
+# Frontend side: theme contrast and presentation rules
+cd ../..
+node --test manapoint-tauri/ui/*.test.mjs
 ```
 
-Requires the .NET 10 SDK.
+Requires Rust 1.82+ and Node 18+ (Node only runs the tests; the UI itself has zero npm
+dependencies). On Windows you also need the WebView2 runtime, which ships with Windows 11.
+
+## Layout
+
+```
+manapoint-tauri/
+  CONTRACT.md          frontend/backend contract: commands, events, DOM, layout rules
+  ui/                  plain HTML/CSS/ES modules, no build step
+  src-tauri/src/
+    providers/         the four collectors and parsers, pure functions where it counts
+    snap.rs            edge-snapping geometry
+    win.rs             Win32: work area, live snapping during a drag
+    lib.rs             window, tray, commands, polling
+```
 
 ## Docs
 
-- [Provider fetch reference](docs/providers.md): endpoints, credential locations and window definitions for each provider.
-  (Document is written in Traditional Chinese.)
+- [Provider reference](docs/providers.md): endpoints, credential paths, window definitions
+- [Frontend/backend contract](manapoint-tauri/CONTRACT.md): types, commands, layout rules
