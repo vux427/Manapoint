@@ -23,4 +23,17 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   </ItemGroup>
+
+  <!--
+    SkiaSharp 與 HarfBuzz 的原生除錯符號隨 NuGet 套件一起帶進來，
+    光這些就佔約 100 MB，散布時完全用不到。
+    移除後 self-contained 由 146 MB 降到約 46 MB。
+  -->
+  <Target Name="RemoveNativeSymbolsFromPublish" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
 </Project>

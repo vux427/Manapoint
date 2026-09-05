@@ -8,7 +8,7 @@
         x:DataType="vm:MainViewModel"
         x:Name="Root"
         Title="Manapoint"
-        Width="252"
+        Width="{Binding Settings.PanelWidth}"
         SizeToContent="Height"
         CanResize="False"
         WindowDecorations="None"
@@ -42,7 +42,67 @@
         <ItemsControl ItemsSource="{Binding Cards}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:ProviderCardViewModel">
-                    <StackPanel Spacing="6" Margin="0,0,0,4">
+                    <StackPanel>
+
+                    <!-- 精簡樣式：一家一行，只有標誌與數字 -->
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="7"
+                                IsVisible="{Binding IsTextStyle}"
+                                Margin="0,0,0,5">
+                        <Border Width="14" Height="14"
+                                CornerRadius="3"
+                                Background="{Binding BadgeBackground}"
+                                VerticalAlignment="Center">
+                            <Panel>
+                                <Path Data="{Binding BadgeIcon}"
+                                      IsVisible="{Binding HasBadgeIcon}"
+                                      Fill="{Binding BadgeForeground}"
+                                      Stretch="Uniform"
+                                      Width="9" Height="9"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding BadgeText}"
+                                           IsVisible="{Binding !HasBadgeIcon}"
+                                           FontSize="7" FontWeight="Bold"
+                                           Foreground="{Binding BadgeForeground}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Panel>
+                        </Border>
+
+                        <ItemsControl ItemsSource="{Binding Windows}"
+                                      VerticalAlignment="Center">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="7" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:UsageWindowViewModel">
+                                    <TextBlock Text="{Binding CompactText}"
+                                               FontSize="10"
+                                               VerticalAlignment="Center"
+                                               Foreground="{Binding FillBrush}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="{Binding Error}"
+                                   IsVisible="{Binding HasError}"
+                                   FontSize="9"
+                                   VerticalAlignment="Center"
+                                   Foreground="#E08A8A" />
+                        <TextBlock Text="—"
+                                   IsVisible="{Binding HasNote}"
+                                   FontSize="10"
+                                   VerticalAlignment="Center"
+                                   ToolTip.Tip="{Binding Note}"
+                                   Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
+                    </StackPanel>
+
+                    <!-- 其餘樣式：標題加逐條量表 -->
+                    <StackPanel Spacing="6" Margin="0,0,0,4"
+                                IsVisible="{Binding IsRowStyle}">
 
                         <StackPanel Orientation="Horizontal" Spacing="7">
                             <Border Width="17" Height="17"
@@ -168,6 +228,8 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </StackPanel>
+
                     </StackPanel>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>

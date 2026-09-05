@@ -33,13 +33,32 @@
 
         <StackPanel Spacing="8">
             <TextBlock Classes="section" Text="顯示的訂閱" />
-            <ItemsControl ItemsSource="{Binding Providers}">
+            <TextBlock Classes="hint" Text="拖曳左側握把可調整顯示順序。" />
+
+            <ItemsControl x:Name="ProviderList"
+                          ItemsSource="{Binding Providers}"
+                          DragDrop.AllowDrop="True">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:ProviderToggleViewModel">
-                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                  IsEnabled="{Binding IsAvailable}"
-                                  Margin="0,0,0,2">
+                        <Border Background="Transparent"
+                                Padding="0,3"
+                                DragDrop.AllowDrop="True">
                             <StackPanel Orientation="Horizontal" Spacing="8">
+
+                                <!-- 拖曳握把：只有這裡會啟動拖曳 -->
+                                <TextBlock Text="⠿"
+                                           FontSize="13"
+                                           Opacity="0.45"
+                                           Cursor="SizeAll"
+                                           VerticalAlignment="Center"
+                                           Background="Transparent"
+                                           Padding="2,0"
+                                           PointerPressed="OnGripPressed" />
+
+                                <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                          IsEnabled="{Binding IsAvailable}"
+                                          VerticalAlignment="Center" />
+
                                 <Border Width="20" Height="20"
                                         CornerRadius="5"
                                         VerticalAlignment="Center"
@@ -61,12 +80,13 @@
                                                    VerticalAlignment="Center" />
                                     </Panel>
                                 </Border>
+
                                 <StackPanel Spacing="1" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Name}" FontSize="12" />
                                     <TextBlock Classes="hint" Text="{Binding Hint}" />
                                 </StackPanel>
                             </StackPanel>
-                        </CheckBox>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -104,6 +124,13 @@
                                                         Background="{Binding Swatch}" />
                                             </Grid>
                                         </Border>
+                                        <TextBlock IsVisible="{Binding IsTextStyle}"
+                                                   Text="{Binding PreviewText}"
+                                                   FontSize="10"
+                                                   FontFamily="Cascadia Mono, Consolas, monospace"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{Binding PreviewTextBrush}" />
                                         <ItemsControl IsVisible="{Binding IsSegmented}"
                                                       ItemsSource="{Binding PreviewSegments}"
                                                       HorizontalAlignment="Center">

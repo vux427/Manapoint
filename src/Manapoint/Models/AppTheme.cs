@@ -10,6 +10,9 @@ public enum MeterStyle
 
     /// <summary>分段方塊，血條式。</summary>
     Segmented,
+
+    /// <summary>不畫圖形，一行文字帶完一家。</summary>
+    Text,
 }
 
 /// <summary>量表的上色依據。</summary>
@@ -67,7 +70,8 @@ public sealed record AppTheme(
     StatusColors Status,
     bool Monospace = false,
     double SegmentRadius = 2.0,
-    bool Brackets = false)
+    bool Brackets = false,
+    double PanelWidth = 252)
 {
     /// <summary>分段樣式的格數。</summary>
     public const int SegmentCount = 10;
@@ -120,6 +124,18 @@ public sealed record AppTheme(
             Critical: Color.Parse("#FF4D4D")),
         Monospace: true, SegmentRadius: 0, Brackets: true);
 
+    public static readonly AppTheme Compact = new(
+        "精簡", "一行一家，只有數字",
+        Panel: Color.Parse("#16191E"),
+        Accent: Color.Parse("#6FA8DC"),
+        TextPrimary: Color.Parse("#E4E9F0"),
+        TextSecondary: Color.Parse("#C8D0DA"),
+        TextMuted: Color.Parse("#B7BBC2"),
+        Track: Color.Parse("#2E333C"),
+        Border: Color.Parse("#3A404A"),
+        MeterStyle.Text, MeterColoring.Status, DarkStatus,
+        Monospace: true, PanelWidth: 186);
+
     public static readonly AppTheme Paper = new(
         "紙白", "連續長條，淺色底",
         Panel: Color.Parse("#F4F4F2"),
@@ -131,7 +147,7 @@ public sealed record AppTheme(
         Border: Color.Parse("#C8C8C4"),
         MeterStyle.Smooth, MeterColoring.Accent, LightStatus);
 
-    public static readonly IReadOnlyList<AppTheme> All = [Graphite, Vitals, Terminal, Paper];
+    public static readonly IReadOnlyList<AppTheme> All = [Graphite, Vitals, Terminal, Compact, Paper];
 
     public static AppTheme ByName(string name) =>
         All.FirstOrDefault(t => t.Name == name) ?? Graphite;

@@ -28,6 +28,21 @@ public static class ProviderRegistry
     public static IEnumerable<string> DefaultEnabled =>
         All.Where(p => p.IsAvailable).Select(p => p.Id);
 
+    /// <summary>
+    /// 依偏好順序排列所有服務。順序清單中沒提到的（例如新增的服務）
+    /// 補在最後，順序清單中已不存在的 id 則略過。
+    /// </summary>
+    public static IReadOnlyList<ProviderDescriptor> InOrder(IEnumerable<string>? order)
+    {
+        if (order is null) return All;
+
+        var known = All.ToDictionary(p => p.Id);
+        var listed = order.Where(known.ContainsKey).Select(id => known[id]).ToList();
+        var listedIds = listed.Select(p => p.Id).ToHashSet();
+
+        return [.. listed, .. All.Where(p => !listedIds.Contains(p.Id))];
+    }
+
     public static ProviderDescriptor Get(string id) =>
         All.FirstOrDefault(p => p.Id == id)
         ?? throw new ArgumentException($"未知的 provider：{id}", nameof(id));

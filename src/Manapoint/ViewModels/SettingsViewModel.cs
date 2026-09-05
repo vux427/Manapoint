@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -31,7 +32,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public event Action? PresentationChanged;
 
     public IReadOnlyList<ThemeOptionViewModel> ThemeOptions { get; }
-    public IReadOnlyList<ProviderToggleViewModel> Providers { get; }
+
+    /// <summary>設定頁的服務清單，順序即顯示順序，可拖曳調整。</summary>
+    public ObservableCollection<ProviderToggleViewModel> Providers { get; } = [];
 
     public SettingsViewModel()
     {
@@ -46,7 +49,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
         Theme = AppTheme.ByName(_settings.ThemeName);
         ThemeOptions = [.. AppTheme.All.Select(t => new ThemeOptionViewModel(t, this))];
-        Providers = [.. ProviderRegistry.All.Select(p => new ProviderToggleViewModel(p, this))];
+
+        foreach (var descriptor in ProviderRegistry.InOrder(_settings.ProviderOrder))
+            Providers.Add(new ProviderToggleViewModel(descriptor, this));
 
         RefreshThemeSelection();
 
@@ -93,8 +98,26 @@ public sealed partial class SettingsViewModel : ViewModelBase
         ? new FontFamily("Cascadia Mono, Consolas, DejaVu Sans Mono, monospace")
         : FontFamily.Default;
 
+    /// <summary>精簡樣式窄很多，面板寬度由主題決定。</summary>
+    public double PanelWidth => Theme.PanelWidth;
+
+    /// <summary>勾選的服務，依使用者排定的順序。</summary>
     public IReadOnlyList<string> EnabledProviderIds =>
-        [.. ProviderRegistry.All.Where(p => _enabled.Contains(p.Id)).Select(p => p.Id)];
+        [.. Providers.Where(p => _enabled.Contains(p.Id)).Select(p => p.Id)];
+
+    /// <summary>把某個服務移到指定位置，並立即反映到主畫面。</summary>
+    public void MoveProvider(ProviderToggleViewModel provider, int targetIndex)
+    {
+        var from = Providers.IndexOf(provider);
+        if (from < 0) return;
+
+        targetIndex = Math.Clamp(targetIndex, 0, Providers.Count - 1);
+        if (from == targetIndex) return;
+
+        Providers.Move(from, targetIndex);
+        Persist();
+        EnabledProvidersChanged?.Invoke();
+    }
 
     public bool IsEnabled(string id) => _enabled.Contains(id);
 
@@ -128,11 +151,13 @@ public sealed partial class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(TrackBrush));
         OnPropertyChanged(nameof(PanelBorderBrush));
         OnPropertyChanged(nameof(PanelFont));
+        OnPropertyChanged(nameof(PanelWidth));
     }
 
     private void Persist()
     {
         _settings.EnabledProviders = [.. EnabledProviderIds];
+        _settings.ProviderOrder = [.. Providers.Select(p => p.Id)];
         SettingsStore.Save(_settings);
     }
 
@@ -153,7 +178,13 @@ public sealed partial class ThemeOptionViewModel(AppTheme theme, SettingsViewMod
     public IBrush Backdrop => new SolidColorBrush(theme.Panel);
     public IBrush TrackSwatch => new SolidColorBrush(theme.Track);
     public bool IsSegmented => theme.MeterStyle == MeterStyle.Segmented;
-    public bool IsSmooth => !IsSegmented;
+    public bool IsSmooth => theme.MeterStyle == MeterStyle.Smooth;
+    public bool IsTextStyle => theme.MeterStyle == MeterStyle.Text;
+
+    /// <summary>純文字樣式的預覽字樣。</summary>
+    public string PreviewText => "5h:12%";
+    public IBrush PreviewTextBrush => new SolidColorBrush(
+        theme.Coloring == MeterColoring.Status ? theme.Status.For(12) : theme.Accent);
     public bool IsSelected => owner.Theme == theme;
 
     /// <summary>色票上的預覽格子：亮起的用狀態色，示意這個主題的樣子。</summary>
@@ -186,6 +217,7 @@ public sealed partial class ProviderToggleViewModel : ViewModelBase
         _owner = owner;
     }
 
+    public string Id => _descriptor.Id;
     public string Name => _descriptor.Name;
     public bool IsAvailable => _descriptor.IsAvailable;
 

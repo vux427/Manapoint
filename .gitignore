@@ -435,3 +435,6 @@ FodyWeavers.xsd
 # Manapoint
 usage-snapshot.json
 *.user
+
+# 建置產物
+/tmp/

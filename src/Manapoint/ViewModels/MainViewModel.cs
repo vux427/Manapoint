@@ -48,6 +48,7 @@ public sealed partial class MainViewModel : ViewModelBase
         _sources.Clear();
         Cards.Clear();
 
+        // EnabledProviderIds 已依使用者排定的順序，直接照序建立卡片。
         foreach (var id in Settings.EnabledProviderIds)
         {
             var descriptor = ProviderRegistry.Get(id);

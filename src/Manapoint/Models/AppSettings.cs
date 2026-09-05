@@ -10,4 +10,7 @@ public sealed class AppSettings
 
     /// <summary>要顯示的服務 id。null 代表尚未設定過，套用預設。</summary>
     public List<string>? EnabledProviders { get; set; }
+
+    /// <summary>服務的顯示順序（含未勾選者）。null 代表沿用註冊表順序。</summary>
+    public List<string>? ProviderOrder { get; set; }
 }

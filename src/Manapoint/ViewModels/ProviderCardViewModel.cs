@@ -13,6 +13,10 @@ public sealed partial class ProviderCardViewModel(
 
     public string Provider => descriptor.Name;
 
+    /// <summary>精簡樣式把一家壓成一行，版面與其他樣式不同。</summary>
+    public bool IsTextStyle => settings.Theme.MeterStyle == MeterStyle.Text;
+    public bool IsRowStyle => !IsTextStyle;
+
     public bool HasBadgeIcon => descriptor.Badge.HasIcon;
     public Geometry? BadgeIcon => descriptor.Badge.IconPath is { } d ? Geometry.Parse(d) : null;
     public string? BadgeText => descriptor.Badge.Text;
@@ -65,5 +69,7 @@ public sealed partial class ProviderCardViewModel(
     {
         OnPropertyChanged(nameof(HasError));
         OnPropertyChanged(nameof(HasNote));
+        OnPropertyChanged(nameof(IsTextStyle));
+        OnPropertyChanged(nameof(IsRowStyle));
     }
 }

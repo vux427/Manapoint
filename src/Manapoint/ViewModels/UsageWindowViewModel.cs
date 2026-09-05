@@ -16,6 +16,18 @@ public sealed partial class UsageWindowViewModel(UsageWindow window, AppTheme th
         _ => throw new ArgumentOutOfRangeException(nameof(window)),
     };
 
+    /// <summary>精簡樣式用的短標籤。</summary>
+    public string ShortLabel => window.Kind switch
+    {
+        UsageWindowKind.Rolling => "5h",
+        UsageWindowKind.Weekly => "7d",
+        UsageWindowKind.Monthly => "30d",
+        _ => throw new ArgumentOutOfRangeException(nameof(window)),
+    };
+
+    /// <summary>精簡樣式的一段文字，例如 "5h:12%"。</summary>
+    public string CompactText => $"{ShortLabel}:{PercentText}";
+
     /// <summary>未滿 1% 但已動用時顯示 &lt;1%，避免看起來完全沒用。</summary>
     public string PercentText => window.Percent switch
     {
@@ -33,7 +45,7 @@ public sealed partial class UsageWindowViewModel(UsageWindow window, AppTheme th
     public bool HasAlert => AlertText.Length > 0;
 
     public bool IsSegmented => theme.MeterStyle == MeterStyle.Segmented;
-    public bool IsSmooth => !IsSegmented;
+    public bool IsSmooth => theme.MeterStyle == MeterStyle.Smooth;
 
     /// <summary>終端風格在量表兩側加括號，強化字元介面的感覺。</summary>
     public bool HasBrackets => theme.Brackets;
