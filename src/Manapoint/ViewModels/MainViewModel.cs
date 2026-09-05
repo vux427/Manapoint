@@ -100,8 +100,9 @@ public sealed partial class MainViewModel : ViewModelBase
             }
             catch (ProviderNotReadyException ex)
             {
-                // 訊息本身就是給使用者的指示，直接顯示。
-                card.Fail(ex.Message);
+                // 訊息本身就是給使用者的指示；有舊數字就留著顯示，
+                // 等 CLI 自動換發後下一輪重試即恢復。
+                card.MarkStale(ex.Message);
             }
             catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
             {
