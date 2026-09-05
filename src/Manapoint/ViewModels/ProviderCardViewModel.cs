@@ -9,7 +9,9 @@ public sealed partial class ProviderCardViewModel(ProviderDescriptor descriptor)
 {
     public string Provider => descriptor.Name;
 
-    public string BadgeText => descriptor.Badge.Text;
+    public bool HasBadgeIcon => descriptor.Badge.HasIcon;
+    public Geometry? BadgeIcon => descriptor.Badge.IconPath is { } d ? Geometry.Parse(d) : null;
+    public string? BadgeText => descriptor.Badge.Text;
     public IBrush BadgeBackground => new SolidColorBrush(descriptor.Badge.Background);
     public IBrush BadgeForeground => new SolidColorBrush(descriptor.Badge.Foreground);
 

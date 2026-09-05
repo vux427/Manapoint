@@ -48,6 +48,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(PanelBrush));
             OnPropertyChanged(nameof(OpacityText));
+            OnPropertyChanged(nameof(HaloOpacity));
             Persist();
         }
     }
@@ -62,6 +63,12 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public IBrush TextMutedBrush => new SolidColorBrush(Theme.TextMuted);
     public IBrush TrackBrush => new SolidColorBrush(Theme.Track);
     public IBrush PanelBorderBrush => new SolidColorBrush(Theme.Border);
+
+    /// <summary>文字與圖形的暈影色，取面板底色，讓低透明度時仍能與桌面分離。</summary>
+    public Color HaloColor => Theme.Panel;
+
+    /// <summary>面板越透明，暈影就要越強才撐得住可讀性。</summary>
+    public double HaloOpacity => Math.Clamp(1.15 - PanelOpacity, 0.25, 0.95);
 
     public IReadOnlyList<string> EnabledProviderIds =>
         [.. ProviderRegistry.All.Where(p => _enabled.Contains(p.Id)).Select(p => p.Id)];
@@ -96,6 +103,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(TextMutedBrush));
         OnPropertyChanged(nameof(TrackBrush));
         OnPropertyChanged(nameof(PanelBorderBrush));
+        OnPropertyChanged(nameof(HaloColor));
     }
 
     private void Persist()
@@ -141,7 +149,9 @@ public sealed partial class ProviderToggleViewModel : ViewModelBase
     public string Name => _descriptor.Name;
     public bool IsAvailable => _descriptor.IsAvailable;
 
-    public string BadgeText => _descriptor.Badge.Text;
+    public bool HasBadgeIcon => _descriptor.Badge.HasIcon;
+    public Geometry? BadgeIcon => _descriptor.Badge.IconPath is { } d ? Geometry.Parse(d) : null;
+    public string? BadgeText => _descriptor.Badge.Text;
     public IBrush BadgeBackground => new SolidColorBrush(_descriptor.Badge.Background);
     public IBrush BadgeForeground => new SolidColorBrush(_descriptor.Badge.Foreground);
 

@@ -14,13 +14,14 @@ public static class ProviderRegistry
     public static readonly IReadOnlyList<ProviderDescriptor> All =
     [
         new(OpenCodeGo, "opencode Go", "opencode CLI 登入狀態", IsAvailable: true,
-            ProviderBadge.Dark("oc", "#7C6BF5")),
+            ProviderBadge.Icon(ProviderIcons.OpenCode, "#0F0F0F")),
         new(ClaudeCode, "Claude Code", "Claude Code 登入狀態", IsAvailable: true,
-            ProviderBadge.Dark("C", "#D97757")),
+            ProviderBadge.Icon(ProviderIcons.Claude, "#D97757")),
         new(Codex, "Codex", "Codex CLI 登入狀態", IsAvailable: false,
-            ProviderBadge.Dark("Cx", "#10A37F")),
+            ProviderBadge.Icon(ProviderIcons.OpenAI, "#000000")),
+        // xAI 的標誌尚未取得，先用字母標記。
         new(Grok, "Grok", "Grok CLI 登入狀態", IsAvailable: false,
-            ProviderBadge.Light("G", "#E8E8E8")),
+            ProviderBadge.Monogram("G", "#E8E8E8", darkText: true)),
     ];
 
     /// <summary>預設開啟所有已實作的服務。</summary>

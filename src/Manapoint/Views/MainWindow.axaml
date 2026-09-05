@@ -39,21 +39,36 @@
         </Border.ContextMenu>
 
         <ItemsControl ItemsSource="{Binding Cards}">
+            <ItemsControl.Effect>
+                <DropShadowEffect BlurRadius="7" OffsetX="0" OffsetY="0"
+                                  Color="{Binding Settings.HaloColor}"
+                                  Opacity="{Binding Settings.HaloOpacity}" />
+            </ItemsControl.Effect>
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:ProviderCardViewModel">
                     <StackPanel Spacing="6" Margin="0,0,0,4">
 
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <Border Width="16" Height="16"
+                            <Border Width="17" Height="17"
                                     CornerRadius="4"
                                     Background="{Binding BadgeBackground}"
                                     VerticalAlignment="Center">
-                                <TextBlock Text="{Binding BadgeText}"
-                                           FontSize="8"
-                                           FontWeight="Bold"
-                                           Foreground="{Binding BadgeForeground}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
+                                <Panel>
+                                    <Path Data="{Binding BadgeIcon}"
+                                          IsVisible="{Binding HasBadgeIcon}"
+                                          Fill="{Binding BadgeForeground}"
+                                          Stretch="Uniform"
+                                          Width="10" Height="10"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding BadgeText}"
+                                               IsVisible="{Binding !HasBadgeIcon}"
+                                               FontSize="8"
+                                               FontWeight="Bold"
+                                               Foreground="{Binding BadgeForeground}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Panel>
                             </Border>
                             <TextBlock Text="{Binding Provider}"
                                        FontSize="10"
