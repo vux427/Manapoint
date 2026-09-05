@@ -11,6 +11,9 @@ public sealed partial class ProviderCardViewModel(
 {
     private ProviderUsage? _latest;
 
+    /// <summary>上次成功取數的原始資料（MarkStale 的說明文字不污染它），供快照寫檔。</summary>
+    public ProviderUsage? LastGood => _latest;
+
     public string Id => descriptor.Id;
     public string Provider => descriptor.Name;
 

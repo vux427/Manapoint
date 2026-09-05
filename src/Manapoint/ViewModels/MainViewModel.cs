@@ -3,6 +3,7 @@ using System.Net;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using Manapoint.Collectors;
+using Manapoint.Models;
 using Manapoint.Services;
 
 namespace Manapoint.ViewModels;
@@ -87,6 +88,41 @@ public sealed partial class MainViewModel : ViewModelBase
             _sources.Add((ProviderRegistry.CreateCollector(id, _http), card));
             Cards.Add(card);
         }
+
+        SeedFromCache();
+    }
+
+    /// <summary>
+    /// 用上次成功的快照先墊著，冷啟動或被限流時也有舊數字看；
+    /// 取數回來（不論成功失敗）都會蓋掉這行說明。
+    /// </summary>
+    private void SeedFromCache()
+    {
+        var cache = UsageCacheStore.Load();
+        if (cache.Count == 0) return;
+
+        foreach (var (_, card) in _sources)
+        {
+            if (cache.TryGetValue(card.Id, out var snapshot))
+            {
+                card.Apply(snapshot);
+                card.MarkStale("上次數字，更新中");
+            }
+        }
+    }
+
+    /// <summary>把有資料的卡片寫回快照，供下次冷啟動墊檔。</summary>
+    private void SaveSnapshot()
+    {
+        var snapshot = new Dictionary<string, ProviderUsage>();
+        foreach (var (_, card) in _sources)
+        {
+            if (card.LastGood is { } usage)
+                snapshot[card.Id] = usage;
+        }
+
+        if (snapshot.Count > 0)
+            UsageCacheStore.Save(snapshot);
     }
 
     [RelayCommand]
@@ -118,5 +154,7 @@ public sealed partial class MainViewModel : ViewModelBase
                 card.Fail("連線逾時");
             }
         }
+
+        SaveSnapshot();
     }
 }
