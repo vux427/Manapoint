@@ -8,13 +8,14 @@
         x:DataType="vm:MainViewModel"
         x:Name="Root"
         Title="Manapoint"
-        Width="248"
+        Width="252"
         SizeToContent="Height"
         CanResize="False"
         WindowDecorations="None"
         Topmost="True"
         ShowInTaskbar="False"
         Background="Transparent"
+        FontFamily="{Binding Settings.PanelFont}"
         TransparencyLevelHint="AcrylicBlur, Blur, Transparent">
 
     <Design.DataContext>
@@ -58,16 +59,14 @@
                                           VerticalAlignment="Center" />
                                     <TextBlock Text="{Binding BadgeText}"
                                                IsVisible="{Binding !HasBadgeIcon}"
-                                               FontSize="8"
-                                               FontWeight="Bold"
+                                               FontSize="8" FontWeight="Bold"
                                                Foreground="{Binding BadgeForeground}"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center" />
                                 </Panel>
                             </Border>
                             <TextBlock Text="{Binding Provider}"
-                                       FontSize="10"
-                                       FontWeight="Bold"
+                                       FontSize="10" FontWeight="Bold"
                                        VerticalAlignment="Center"
                                        Foreground="{Binding #Root.DataContext.Settings.TextPrimaryBrush}" />
                         </StackPanel>
@@ -75,28 +74,33 @@
                         <TextBlock Text="{Binding Error}"
                                    IsVisible="{Binding HasError}"
                                    FontSize="10"
-                                   Foreground="#D97070"
+                                   Foreground="#E08A8A"
+                                   TextWrapping="Wrap" />
+
+                        <TextBlock Text="{Binding Note}"
+                                   IsVisible="{Binding HasNote}"
+                                   FontSize="10"
+                                   Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}"
                                    TextWrapping="Wrap" />
 
                         <ItemsControl ItemsSource="{Binding Windows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:UsageWindowViewModel">
-                                    <Grid ColumnDefinitions="42,*,32,28" Margin="0,0,0,5">
+                                    <Grid ColumnDefinitions="44,*,36,26" Margin="0,0,0,5">
 
                                         <TextBlock Grid.Column="0"
                                                    Text="{Binding Label}"
-                                                   FontSize="9"
-                                                   FontWeight="SemiBold"
+                                                   FontSize="9" FontWeight="SemiBold"
                                                    VerticalAlignment="Center"
                                                    Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
 
                                         <Border Grid.Column="1"
-                                                Height="5"
-                                                CornerRadius="2.5"
+                                                IsVisible="{Binding IsSmooth}"
+                                                Height="5" CornerRadius="2.5"
                                                 ClipToBounds="True"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,9,0"
-                                                Background="{Binding #Root.DataContext.Settings.TrackBrush}">
+                                                Background="{Binding TrackBrush}">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{Binding UsedStar}" />
@@ -104,16 +108,55 @@
                                                 </Grid.ColumnDefinitions>
                                                 <Border Grid.Column="0"
                                                         CornerRadius="2.5"
-                                                        Background="{Binding #Root.DataContext.Settings.AccentBrush}" />
+                                                        Background="{Binding FillBrush}" />
                                             </Grid>
                                         </Border>
 
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding PercentText}"
-                                                   FontSize="10"
-                                                   TextAlignment="Right"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="{Binding #Root.DataContext.Settings.TextSecondaryBrush}" />
+                                        <StackPanel Grid.Column="1"
+                                                    IsVisible="{Binding IsSegmented}"
+                                                    Orientation="Horizontal"
+                                                    Spacing="3"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,9,0">
+                                            <TextBlock Text="["
+                                                       IsVisible="{Binding HasBrackets}"
+                                                       FontSize="10"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
+                                            <ItemsControl ItemsSource="{Binding Segments}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" Spacing="2" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="vm:MeterSegmentViewModel">
+                                                        <Border Width="7" Height="7"
+                                                                CornerRadius="{Binding Radius}"
+                                                                Background="{Binding Brush}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="]"
+                                                       IsVisible="{Binding HasBrackets}"
+                                                       FontSize="10"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{Binding #Root.DataContext.Settings.TextMutedBrush}" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2"
+                                                    Orientation="Horizontal"
+                                                    Spacing="2"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding AlertText}"
+                                                       IsVisible="{Binding HasAlert}"
+                                                       FontSize="10" FontWeight="Bold"
+                                                       Foreground="{Binding FillBrush}" />
+                                            <TextBlock Text="{Binding PercentText}"
+                                                       FontSize="10"
+                                                       Foreground="{Binding #Root.DataContext.Settings.TextSecondaryBrush}" />
+                                        </StackPanel>
 
                                         <TextBlock Grid.Column="3"
                                                    Text="{Binding ResetsInText}"

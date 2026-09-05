@@ -21,6 +21,7 @@ public sealed partial class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         Settings.EnabledProvidersChanged += OnEnabledProvidersChanged;
+        Settings.PresentationChanged += OnPresentationChanged;
         RebuildSources();
 
         _timer = new DispatcherTimer { Interval = RefreshInterval };
@@ -28,6 +29,12 @@ public sealed partial class MainViewModel : ViewModelBase
         _timer.Start();
 
         _ = RefreshAsync();
+    }
+
+    /// <summary>主題只影響呈現，不必重新取數。</summary>
+    private void OnPresentationChanged()
+    {
+        foreach (var (_, card) in _sources) card.Rerender();
     }
 
     private void OnEnabledProvidersChanged()
@@ -46,7 +53,7 @@ public sealed partial class MainViewModel : ViewModelBase
             var descriptor = ProviderRegistry.Get(id);
             if (!descriptor.IsAvailable) continue;
 
-            var card = new ProviderCardViewModel(descriptor);
+            var card = new ProviderCardViewModel(descriptor, Settings);
             _sources.Add((ProviderRegistry.CreateCollector(id, _http), card));
             Cards.Add(card);
         }

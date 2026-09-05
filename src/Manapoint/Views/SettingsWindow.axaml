@@ -73,43 +73,62 @@
         </StackPanel>
 
         <StackPanel Spacing="6">
-            <TextBlock Classes="section" Text="配色" />
+            <TextBlock Classes="section" Text="風格" />
             <ItemsControl ItemsSource="{Binding ThemeOptions}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" Spacing="8" />
+                        <StackPanel Orientation="Vertical" Spacing="6" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:ThemeOptionViewModel">
-                        <Button Command="{Binding SelectCommand}"
-                                Padding="0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Cursor="Hand"
-                                ToolTip.Tip="{Binding Name}">
-                            <Border Width="52" Height="38"
-                                    CornerRadius="6"
-                                    Background="{Binding Backdrop}"
-                                    BorderThickness="2">
-                                <Border.Styles>
-                                    <Style Selector="Border">
-                                        <Setter Property="BorderBrush" Value="#00000000" />
-                                    </Style>
-                                </Border.Styles>
-                                <Panel>
-                                    <Border Width="22" Height="4"
-                                            CornerRadius="2"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Center"
-                                            Background="{Binding Swatch}" />
-                                    <Border IsVisible="{Binding IsSelected}"
-                                            BorderBrush="{Binding Swatch}"
-                                            BorderThickness="2"
-                                            CornerRadius="5" />
-                                </Panel>
-                            </Border>
-                        </Button>
+                        <RadioButton GroupName="theme"
+                                     IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                     Command="{Binding SelectCommand}"
+                                     Cursor="Hand">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+
+                                <!-- 預覽該風格實際的量表樣子 -->
+                                <Border Width="76" Height="30"
+                                        CornerRadius="5"
+                                        Background="{Binding Backdrop}"
+                                        Padding="6,0">
+                                    <Panel VerticalAlignment="Center">
+                                        <Border IsVisible="{Binding IsSmooth}"
+                                                Height="5" CornerRadius="2.5"
+                                                ClipToBounds="True"
+                                                Background="{Binding TrackSwatch}">
+                                            <Grid ColumnDefinitions="3*,2*">
+                                                <Border Grid.Column="0"
+                                                        CornerRadius="2.5"
+                                                        Background="{Binding Swatch}" />
+                                            </Grid>
+                                        </Border>
+                                        <ItemsControl IsVisible="{Binding IsSegmented}"
+                                                      ItemsSource="{Binding PreviewSegments}"
+                                                      HorizontalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="2" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:MeterSegmentViewModel">
+                                                    <Border Width="9" Height="7"
+                                                            CornerRadius="{Binding Radius}"
+                                                            Background="{Binding Brush}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Panel>
+                                </Border>
+
+                                <StackPanel Spacing="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontSize="12" />
+                                    <TextBlock Classes="hint" Text="{Binding Description}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </RadioButton>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

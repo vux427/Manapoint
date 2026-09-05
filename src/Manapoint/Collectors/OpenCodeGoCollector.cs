@@ -32,7 +32,7 @@ public sealed class OpenCodeGoCollector(HttpClient http) : IUsageCollector
     /// <summary>讀取 opencode CLI 存放的 Go API key。找不到即拋例外。</summary>
     private static string ReadApiKey()
     {
-        var path = AuthFilePath();
+        var path = OpenCodeAuth.FilePath;
         if (!File.Exists(path))
             throw new ProviderNotReadyException("找不到 opencode，請先安裝並登入");
 
@@ -46,18 +46,5 @@ public sealed class OpenCodeGoCollector(HttpClient http) : IUsageCollector
             throw new ProviderNotReadyException("opencode Go 的登入資料不完整，請重新登入");
 
         return key;
-    }
-
-    private static string AuthFilePath()
-    {
-        var dataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
-        if (string.IsNullOrWhiteSpace(dataHome))
-        {
-            dataHome = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".local", "share");
-        }
-
-        return Path.Combine(dataHome, "opencode", "auth.json");
     }
 }

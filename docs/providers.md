@@ -71,19 +71,32 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
 
 ## Grok
 
-尚未驗證。
+已驗證（2026-09-05）。
 
+- 憑證：`~/.local/share/opencode/auth.json` → `xai.access`
+  **不需要安裝 Grok CLI**——opencode 的 xAI OAuth token 可直接通到
+  grok.com 的帳務介面，這點是實測確認的。
 - 請求：`GET https://cli-chat-proxy.grok.com/v1/billing`
-        `GET https://cli-chat-proxy.grok.com/v1/user`
+- 認證：`Authorization: Bearer <access>`
 
-端點接受 bearer token（401 回應標示 `auth_kind=bearer`），但憑證來源未定：
+回傳（節錄）：
 
-- **Grok CLI** — 原始設計假設的來源，本機未安裝，無法驗證。
-- **opencode 的 `xai` OAuth** — 存在於 `~/.local/share/opencode/auth.json`，
-  型別為 oauth。以過期 token 測試得到 401，無法判斷該憑證能否
-  通到 grok.com 的帳務介面；兩者可能屬於不同的產品面。
+```json
+{ "config": {
+    "monthlyLimit": { "val": 0 },
+    "used": { "val": 0 },
+    "billingPeriodStart": "2026-09-01T00:00:00+00:00",
+    "billingPeriodEnd":   "2026-10-01T00:00:00+00:00",
+    "history": [ ... ]
+} }
+```
 
-需要有效 token 才能繼續。
+**Grok 只有月結額度，沒有滾動或每週窗口。** 代理上只存在
+`/v1/user`、`/v1/billing`、`/v1/models` 三個端點，其餘皆 404。
+
+`monthlyLimit` 為 0 的帳號無從計算比例，此時顯示說明文字而非畫一條 0%。
+
+注意：`/v1/user` 回應含 email、姓名、userId 等個資，本專案不呼叫該端點。
 
 ---
 

@@ -5,8 +5,12 @@ using Manapoint.Models;
 namespace Manapoint.ViewModels;
 
 /// <summary>一個服務的卡片。取數失敗時顯示指示而非靜默隱藏。</summary>
-public sealed partial class ProviderCardViewModel(ProviderDescriptor descriptor) : ViewModelBase
+public sealed partial class ProviderCardViewModel(
+    ProviderDescriptor descriptor,
+    SettingsViewModel settings) : ViewModelBase
 {
+    private ProviderUsage? _latest;
+
     public string Provider => descriptor.Name;
 
     public bool HasBadgeIcon => descriptor.Badge.HasIcon;
@@ -18,22 +22,48 @@ public sealed partial class ProviderCardViewModel(ProviderDescriptor descriptor)
     [ObservableProperty]
     public partial IReadOnlyList<UsageWindowViewModel> Windows { get; set; } = [];
 
+    /// <summary>沒有窗口可畫時的說明，例如帳號未設定額度上限。</summary>
+    [ObservableProperty]
+    public partial string? Note { get; set; }
+
     [ObservableProperty]
     public partial string? Error { get; set; }
 
     public bool HasError => Error is not null;
+    public bool HasNote => Note is not null;
 
     public void Apply(ProviderUsage usage)
     {
-        Windows = [.. usage.Windows.Select(w => new UsageWindowViewModel(w))];
+        _latest = usage;
         Error = null;
-        OnPropertyChanged(nameof(HasError));
+        Render();
     }
 
     public void Fail(string message)
     {
+        _latest = null;
         Windows = [];
+        Note = null;
         Error = message;
+        Notify();
+    }
+
+    /// <summary>主題換了要重畫，量表樣式與配色都跟著主題走。</summary>
+    public void Rerender()
+    {
+        if (_latest is not null) Render();
+    }
+
+    private void Render()
+    {
+        Windows = [.. _latest!.Windows.Select(w => new UsageWindowViewModel(w, settings.Theme))];
+        Note = _latest.Note;
+        Notify();
+    }
+
+    private void Notify()
+    {
         OnPropertyChanged(nameof(HasError));
+        OnPropertyChanged(nameof(HasNote));
     }
 }

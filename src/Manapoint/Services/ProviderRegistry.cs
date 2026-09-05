@@ -20,7 +20,7 @@ public static class ProviderRegistry
             ProviderBadge.Icon(ProviderIcons.Claude, "#D97757")),
         new(Codex, "Codex", "Codex CLI 登入狀態", IsAvailable: true,
             ProviderBadge.Icon(ProviderIcons.OpenAI, "#000000")),
-        new(Grok, "Grok", "Grok CLI 登入狀態", IsAvailable: false,
+        new(Grok, "Grok", "opencode 的 xAI 登入", IsAvailable: true,
             ProviderBadge.Icon(ProviderIcons.Grok, "#1A1A1A")),
     ];
 
@@ -38,6 +38,7 @@ public static class ProviderRegistry
         OpenCodeGo => new OpenCodeGoCollector(http),
         ClaudeCode => new ClaudeCodeCollector(http),
         Codex => new CodexCollector(http),
+        Grok => new GrokCollector(http),
         _ => throw new NotSupportedException($"{id} 的取數器尚未實作。"),
     };
 }

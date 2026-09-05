@@ -35,6 +35,10 @@ public class ThemeContrastTests
             ("TextSecondary", theme.TextSecondary, TextRatio),
             ("TextMuted", theme.TextMuted, TextRatio),
             ("Accent", theme.Accent, GraphicRatio),
+            // 狀態色會畫成量表填色，同樣要在任意桌面上看得見。
+            ("Status.Good", theme.Status.Good, GraphicRatio),
+            ("Status.Warning", theme.Status.Warning, GraphicRatio),
+            ("Status.Critical", theme.Status.Critical, GraphicRatio),
         })
         {
             var worst = WorstCaseContrast(color, theme.Panel, SettingsViewModel.MinOpacity);

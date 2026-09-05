@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -18,6 +19,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     /// <summary>勾選的服務有變動時觸發，讓主畫面重建卡片。</summary>
     public event Action? EnabledProvidersChanged;
+
+    /// <summary>主題換了要重畫，量表樣式與配色都由主題決定。</summary>
+    public event Action? PresentationChanged;
 
     public IReadOnlyList<ThemeOptionViewModel> ThemeOptions { get; }
     public IReadOnlyList<ProviderToggleViewModel> Providers { get; }
@@ -73,6 +77,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public IBrush PanelBorderBrush => new SolidColorBrush(Theme.Border);
 
 
+    /// <summary>終端風格改用等寬字，其餘沿用系統介面字型。</summary>
+    public FontFamily PanelFont => Theme.Monospace
+        ? new FontFamily("Cascadia Mono, Consolas, DejaVu Sans Mono, monospace")
+        : FontFamily.Default;
+
     public IReadOnlyList<string> EnabledProviderIds =>
         [.. ProviderRegistry.All.Where(p => _enabled.Contains(p.Id)).Select(p => p.Id)];
 
@@ -95,6 +104,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _settings.ThemeName = theme.Name;
         Persist();
         RefreshThemeSelection();
+        PresentationChanged?.Invoke();
     }
 
     partial void OnThemeChanged(AppTheme value)
@@ -106,6 +116,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(TextMutedBrush));
         OnPropertyChanged(nameof(TrackBrush));
         OnPropertyChanged(nameof(PanelBorderBrush));
+        OnPropertyChanged(nameof(PanelFont));
     }
 
     private void Persist()
@@ -126,9 +137,25 @@ public sealed partial class ThemeOptionViewModel(AppTheme theme, SettingsViewMod
     : ViewModelBase
 {
     public string Name => theme.Name;
+    public string Description => theme.Description;
     public IBrush Swatch => new SolidColorBrush(theme.Accent);
     public IBrush Backdrop => new SolidColorBrush(theme.Panel);
+    public IBrush TrackSwatch => new SolidColorBrush(theme.Track);
+    public bool IsSegmented => theme.MeterStyle == MeterStyle.Segmented;
+    public bool IsSmooth => !IsSegmented;
     public bool IsSelected => owner.Theme == theme;
+
+    /// <summary>色票上的預覽格子：亮起的用狀態色，示意這個主題的樣子。</summary>
+    public IReadOnlyList<MeterSegmentViewModel> PreviewSegments =>
+    [
+        .. Enumerable.Range(0, 5).Select(i => new MeterSegmentViewModel(
+            i < 3,
+            new SolidColorBrush(theme.Coloring == MeterColoring.Status
+                ? theme.Status.For(60)
+                : theme.Accent),
+            new SolidColorBrush(theme.Track),
+            new CornerRadius(theme.SegmentRadius)))
+    ];
 
     [RelayCommand]
     private void Select() => owner.SelectTheme(theme);
