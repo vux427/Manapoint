@@ -33,6 +33,7 @@ Built with C# + Avalonia 12, cross-platform (Windows / macOS / Linux).
 - Five panel styles: Graphite, Vitals, Terminal, Compact, Paper.
 - Reorder subscriptions by drag and drop in settings, with an insertion-line indicator.
 - Fetch failures show their reason instead of silently hiding.
+- Start on boot (Windows, toggle in settings, no admin rights needed).
 
 ## Build & Test
 

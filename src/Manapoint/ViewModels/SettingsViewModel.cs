@@ -133,6 +133,35 @@ public sealed partial class SettingsViewModel : ViewModelBase
         EnabledProvidersChanged?.Invoke();
     }
 
+    public bool IsAutoStartSupported => AutoStartManager.IsSupported;
+
+    /// <summary>開機啟動開關。登錄本身就是儲存，讀寫都直通，不進設定檔。</summary>
+    public bool AutoStart
+    {
+        get => AutoStartManager.IsEnabled();
+        set
+        {
+            AutoStartError = null;
+            try
+            {
+                AutoStartManager.SetEnabled(value);
+            }
+            catch (Exception ex)
+            {
+                AutoStartError = ex.Message;
+            }
+            OnPropertyChanged();
+        }
+    }
+
+    [ObservableProperty]
+    public partial string? AutoStartError { get; set; }
+
+    public bool HasAutoStartError => AutoStartError is not null;
+
+    partial void OnAutoStartErrorChanged(string? value) =>
+        OnPropertyChanged(nameof(HasAutoStartError));
+
     public void SelectTheme(AppTheme theme)
     {
         if (theme == Theme) return;

@@ -211,6 +211,26 @@
         </StackPanel>
 
         <StackPanel Spacing="4">
+            <TextBlock Classes="section" Text="開機啟動" />
+            <CheckBox Content="開機時自動啟動 Manapoint"
+                      IsChecked="{Binding AutoStart, Mode=TwoWay}"
+                      IsVisible="{Binding IsAutoStartSupported}"
+                      VerticalAlignment="Center" />
+            <TextBlock Classes="hint"
+                       IsVisible="{Binding IsAutoStartSupported}"
+                       TextWrapping="Wrap"
+                       Text="寫入你這個使用者的啟動登錄，不需管理員權限；以目前執行的這個檔案註冊。" />
+            <TextBlock Text="{Binding AutoStartError}"
+                       IsVisible="{Binding HasAutoStartError}"
+                       FontSize="10"
+                       Foreground="#C97A2E"
+                       TextWrapping="Wrap" />
+            <TextBlock Classes="hint"
+                       IsVisible="{Binding !IsAutoStartSupported}"
+                       Text="此平台不支援開機啟動。" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Classes="section" Text="面板不透明度" />
                 <TextBlock Grid.Column="1" Classes="hint" Text="{Binding OpacityText}" />
