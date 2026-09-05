@@ -8,6 +8,8 @@ namespace Manapoint.ViewModels;
 /// <summary>單一窗口在卡片上的一條量表。呈現方式由主題決定。</summary>
 public sealed partial class UsageWindowViewModel(UsageWindow window, AppTheme theme) : ViewModelBase
 {
+    public UsageWindowKind Kind => window.Kind;
+
     public string Label => window.Kind switch
     {
         UsageWindowKind.Rolling => "5H",

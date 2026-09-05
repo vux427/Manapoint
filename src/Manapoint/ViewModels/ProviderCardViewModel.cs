@@ -26,6 +26,15 @@ public sealed partial class ProviderCardViewModel(
     [ObservableProperty]
     public partial IReadOnlyList<UsageWindowViewModel> Windows { get; set; } = [];
 
+    /// <summary>精簡樣式的固定欄位：每種窗口各佔一欄，缺席留空，欄位才對得齊。</summary>
+    public UsageWindowViewModel? Rolling => Windows.FirstOrDefault(w => w.Kind == UsageWindowKind.Rolling);
+    public UsageWindowViewModel? Weekly => Windows.FirstOrDefault(w => w.Kind == UsageWindowKind.Weekly);
+    public UsageWindowViewModel? Monthly => Windows.FirstOrDefault(w => w.Kind == UsageWindowKind.Monthly);
+
+    public bool HasRolling => Rolling is not null;
+    public bool HasWeekly => Weekly is not null;
+    public bool HasMonthly => Monthly is not null;
+
     /// <summary>沒有窗口可畫時的說明，例如帳號未設定額度上限。</summary>
     [ObservableProperty]
     public partial string? Note { get; set; }
@@ -71,5 +80,11 @@ public sealed partial class ProviderCardViewModel(
         OnPropertyChanged(nameof(HasNote));
         OnPropertyChanged(nameof(IsTextStyle));
         OnPropertyChanged(nameof(IsRowStyle));
+        OnPropertyChanged(nameof(Rolling));
+        OnPropertyChanged(nameof(Weekly));
+        OnPropertyChanged(nameof(Monthly));
+        OnPropertyChanged(nameof(HasRolling));
+        OnPropertyChanged(nameof(HasWeekly));
+        OnPropertyChanged(nameof(HasMonthly));
     }
 }

@@ -165,6 +165,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
     {
         foreach (var option in ThemeOptions)
             option.Refresh();
+        foreach (var provider in Providers)
+            provider.RefreshTheme();
     }
 }
 
@@ -181,10 +183,12 @@ public sealed partial class ThemeOptionViewModel(AppTheme theme, SettingsViewMod
     public bool IsSmooth => theme.MeterStyle == MeterStyle.Smooth;
     public bool IsTextStyle => theme.MeterStyle == MeterStyle.Text;
 
-    /// <summary>純文字樣式的預覽字樣。</summary>
-    public string PreviewText => "5h:12%";
+    /// <summary>純文字樣式的預覽字樣，與主畫面同為標籤加數字兩段式。</summary>
+    public string PreviewShortLabel => "5h";
+    public string PreviewPercent => "12%";
     public IBrush PreviewTextBrush => new SolidColorBrush(
         theme.Coloring == MeterColoring.Status ? theme.Status.For(12) : theme.Accent);
+    public IBrush PreviewMutedBrush => new SolidColorBrush(theme.TextMuted);
     public bool IsSelected => owner.Theme == theme;
 
     /// <summary>色票上的預覽格子：亮起的用狀態色，示意這個主題的樣子。</summary>
@@ -241,5 +245,66 @@ public sealed partial class ProviderToggleViewModel : ViewModelBase
             _owner.SetEnabled(_descriptor.Id, value);
             OnPropertyChanged();
         }
+    }
+
+    /// <summary>正在被拖曳的列：半透明，讓使用者知道抓的是哪一列。</summary>
+    private bool _isDragging;
+    public bool IsDragging
+    {
+        get => _isDragging;
+        set
+        {
+            if (SetProperty(ref _isDragging, value))
+                OnPropertyChanged(nameof(RowOpacity));
+        }
+    }
+
+    /// <summary>拖曳懸停的目標列：顯示插入線與底色。</summary>
+    private bool _isDropTarget;
+    public bool IsDropTarget
+    {
+        get => _isDropTarget;
+        set
+        {
+            if (SetProperty(ref _isDropTarget, value))
+            {
+                OnPropertyChanged(nameof(RowBackground));
+                OnPropertyChanged(nameof(ShowInsertBefore));
+                OnPropertyChanged(nameof(ShowInsertAfter));
+            }
+        }
+    }
+
+    /// <summary>插入線在目標列下方（true）或上方（false），由指標在列中的上下半區決定。</summary>
+    private bool _dropAfter;
+    public bool DropAfter
+    {
+        get => _dropAfter;
+        set
+        {
+            if (SetProperty(ref _dropAfter, value))
+            {
+                OnPropertyChanged(nameof(ShowInsertBefore));
+                OnPropertyChanged(nameof(ShowInsertAfter));
+            }
+        }
+    }
+
+    public bool ShowInsertBefore => IsDropTarget && !DropAfter;
+    public bool ShowInsertAfter => IsDropTarget && DropAfter;
+
+    public double RowOpacity => IsDragging ? 0.45 : 1.0;
+
+    public IBrush RowBackground => IsDropTarget
+        ? new SolidColorBrush(_owner.Theme.Accent, 0.16)
+        : Brushes.Transparent;
+
+    public IBrush InsertionBrush => _owner.AccentBrush;
+
+    /// <summary>主題換了，底色與插入線顏色跟著走。</summary>
+    public void RefreshTheme()
+    {
+        OnPropertyChanged(nameof(RowBackground));
+        OnPropertyChanged(nameof(InsertionBrush));
     }
 }

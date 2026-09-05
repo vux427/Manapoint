@@ -134,7 +134,7 @@ public sealed record AppTheme(
         Track: Color.Parse("#2E333C"),
         Border: Color.Parse("#3A404A"),
         MeterStyle.Text, MeterColoring.Status, DarkStatus,
-        Monospace: true, PanelWidth: 186);
+        Monospace: true, PanelWidth: 232);
 
     public static readonly AppTheme Paper = new(
         "紙白", "連續長條，淺色底",
