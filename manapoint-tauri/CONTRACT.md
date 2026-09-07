@@ -149,7 +149,7 @@ Every theme object has these fields — **all required, names must not change**:
 ```js
 {
   name: "石墨",              // also the value stored in settings.themeName
-  description: "連續長條，單一強調色",
+  description: "連續長條，高用量轉色",
   panel: "#1B1E24",
   accent: "#6FA8DC",
   textPrimary: "#E4E9F0",
@@ -158,8 +158,8 @@ Every theme object has these fields — **all required, names must not change**:
   track: "#2E333C",
   border: "#3A404A",
   meterStyle: "smooth",      // "smooth" | "segmented" | "text"
-  coloring: "accent",        // "accent" | "status"
-  status: { good: "#4ADE80", warning: "#FBBF24", critical: "#F87171" },
+  coloring: "status",        // "accent" | "status"
+  status: { good: "#6FA8DC", warning: "#FBBF24", critical: "#F87171" },
   monospace: false,
   segmentRadius: 2,          // px
   brackets: false,

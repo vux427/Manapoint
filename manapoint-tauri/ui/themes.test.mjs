@@ -168,11 +168,12 @@ describe("themes known values", () => {
     assert.equal(theme.panelWidth, 196);
   });
 
-  it("石墨 and 紙白 use smooth accent meters", () => {
+  it("石墨 and 紙白 use smooth status meters", () => {
     for (const name of ["石墨", "紙白"]) {
       const theme = themeByName(name);
       assert.equal(theme.meterStyle, "smooth");
-      assert.equal(theme.coloring, "accent");
+      assert.equal(theme.coloring, "status");
+      assert.equal(theme.status.good, theme.accent);
     }
   });
 

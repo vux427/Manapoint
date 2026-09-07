@@ -78,7 +78,7 @@ function buildThemePreview(theme) {
     const fill = document.createElement("div");
     fill.className = "preview-bar__fill";
     fill.style.width = `${SMOOTH_PREVIEW_FILL}%`;
-    fill.style.background = theme.accent;
+    fill.style.background = statusColor(theme, SMOOTH_PREVIEW_FILL);
     track.appendChild(fill);
     wrap.appendChild(track);
   } else if (theme.meterStyle === "segmented") {
