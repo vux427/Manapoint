@@ -20,6 +20,23 @@ run offers to install it.
 
 Clone the repo only if you want to change something — see Build and test below.
 
+### If your antivirus blocks it
+
+`Manapoint.exe` does not carry a paid code signing certificate yet. Windows Defender and
+SmartScreen warn about unsigned executables that few people have downloaded, and sometimes
+call them outright malware — that is a false positive. To check the file you have was not
+tampered with, compare it against the SHA-256 listed on the Releases page:
+
+```powershell
+Get-FileHash .\Manapoint.exe -Algorithm SHA256
+```
+
+Manapoint only reads the sign-in state each vendor's CLI already stores on your machine and
+calls the vendors' official APIs. The whole collection path lives in
+`src-tauri/src/providers/` and the source is all in this repo. If it stays blocked, you can
+report the file at [Microsoft's false positive form](https://www.microsoft.com/en-us/wdsi/filesubmission);
+it is usually cleared within a few days.
+
 ## Themes
 
 | Graphite | Vitals |
@@ -75,6 +92,20 @@ node --test manapoint-tauri/ui/*.test.mjs
 
 The release binary is about 4.7 MB (LTO, opt-level=z, stripped); rendering goes through the
 system WebView2, so no runtime is bundled.
+
+### Releasing
+
+`scripts/release.ps1` builds, signs (when a certificate is configured), stages the
+executable at `dist/Manapoint.exe` and prints the SHA-256 for the release notes. It fails
+outright if the version resource lost its publisher or copyright string, and warns when the
+binary is unsigned — an unsigned executable is almost certain to be flagged by Defender, so
+it never passes quietly.
+
+```powershell
+# Example: Azure Trusted Signing. {} is replaced with the file to sign.
+$env:MANAPOINT_SIGN_CMD = 'signtool sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib "C:\ats\Azure.CodeSigning.Dlib.dll" /dmdf "C:\ats\metadata.json" "{}"'
+pwsh -File scriptselease.ps1
+```
 
 Requires Rust 1.82+ and Node 18+ (Node only runs the tests; the UI itself has zero npm
 dependencies). On Windows you also need the WebView2 runtime, which ships with Windows 11.

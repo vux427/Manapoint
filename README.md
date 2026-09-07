@@ -19,6 +19,20 @@ Windows 11 已內建需要的 WebView2 執行階段；Windows 10 若還沒有，
 
 想改東西才需要整包 clone，見下面的建置與測試。
 
+### 被防毒軟體攔下來的話
+
+`Manapoint.exe` 還沒有付費的程式碼簽章憑證。Windows Defender 與 SmartScreen 對沒簽章、
+又剛發布沒什麼下載量的執行檔本來就會警告，有時直接判定成病毒——那是誤判。要確認手上的檔案
+沒被動過，跟 Releases 頁面列的 SHA-256 對一下：
+
+```powershell
+Get-FileHash .\Manapoint.exe -Algorithm SHA256
+```
+
+Manapoint 只讀各家 CLI 已經存在本機的登入狀態，並對各家官方 API 發請求，取數邏輯全在
+`src-tauri/src/providers/`，原始碼都在這個 repo 裡。仍然被攔的話可以到
+[微軟誤判回報](https://www.microsoft.com/en-us/wdsi/filesubmission)提交檔案，通常幾天內解除。
+
 ## 風格一覽
 
 | 石墨 | 魔力 |
@@ -71,6 +85,18 @@ node --test manapoint-tauri/ui/*.test.mjs
 
 發布版執行檔約 4.7 MB（LTO、opt-level=z、剝除符號），靠系統的 WebView2 算繪，
 不夾帶執行階段。
+
+### 發布
+
+`scripts/release.ps1` 會建置、簽章（設好憑證時）、把執行檔放到 `dist/Manapoint.exe`，
+並印出 SHA-256 給發布說明用。版本資源少了發行者或版權字串就直接失敗，沒簽章時會出警告——
+沒簽章的執行檔幾乎一定會被 Defender 攔，所以不讓它安靜地過。
+
+```powershell
+# 例：Azure Trusted Signing，{} 會換成要簽的檔案
+$env:MANAPOINT_SIGN_CMD = 'signtool sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib "C:\ats\Azure.CodeSigning.Dlib.dll" /dmdf "C:\ats\metadata.json" "{}"'
+pwsh -File scriptselease.ps1
+```
 
 需要 Rust 1.82+ 與 Node 18+（Node 只用來跑測試，介面本身沒有任何 npm 依賴）。
 Windows 另需 WebView2 執行階段，Windows 11 已內建。
