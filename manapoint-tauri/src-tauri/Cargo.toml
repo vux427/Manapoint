@@ -1,6 +1,6 @@
 [package]
 name = "manapoint"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.82"
 description = "AI 訂閱用量的桌面浮動面板"
