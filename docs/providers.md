@@ -38,19 +38,33 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
 
 ## Claude Code
 
-待實作。
+已驗證（2026-09-05 取數；換發流程對照 MIT 授權的 riah-usage `lib/pull-claude.py`）。
 
-- 憑證：`~/.claude/.credentials.json` → `claudeAiOauth`
+- 憑證：`~/.claude/.credentials.json` → `claudeAiOauth`（`accessToken`、`refreshToken`、`expiresAt` 毫秒）
 - 換發：`POST https://platform.claude.com/v1/oauth/token`
-  （`grant_type=refresh_token`，client_id 為 Claude Code 公開值）
-- 請求：`GET https://api.anthropic.com/api/oauth/usage`
-- 提供 5 小時 / 每週 窗口，另有模型分軸的 scoped window
+  （`grant_type=refresh_token`，client_id 為 Claude Code 公開值
+  `9d1c250a-e61b-44d9-88ed-5944d1962f5e`；回 `access_token`／輪換的
+  `refresh_token`／`expires_in` 秒）
+- 請求：`GET https://api.anthropic.com/api/oauth/usage`，附
+  `anthropic-beta: oauth-2025-04-20`
+- 提供 5 小時 / 每週 窗口，另有模型分軸的 scoped window（目前只取前兩者）
+- 本機 `expiresAt` 只當提示：到期前 5 分鐘主動換發並寫回同一個憑證檔
+  （只動 `claudeAiOauth` 的三個 token 欄位，保留 scopes 等中繼資料）；
+  用量 API 回 401/403 時再換發重試一次，仍失敗才顯示登入指示
 
 ## Codex
 
 已驗證（2026-09-05）。
 
 - 憑證：`~/.codex/auth.json` → `tokens.access_token`、`tokens.account_id`
+- 換發：`POST https://auth.openai.com/oauth/token`（JSON body：
+  `client_id` 為 Codex 公開值 `app_EMoamEEZ73f0CkXaXp7hrann`、
+  `grant_type=refresh_token`、`refresh_token`；沿用 Codex 自己的
+  `CODEX_REFRESH_TOKEN_URL_OVERRIDE`／`CODEX_APP_SERVER_LOGIN_CLIENT_ID`
+  覆寫；回 `access_token`／輪換的 `refresh_token`／`id_token`）
+  並寫回同一個憑證檔（只動 `tokens` 與 `last_refresh`）
+- 到期前 5 分鐘（JWT `exp`）或閒置超過 8 天（`last_refresh`）主動換發，
+  與 CLI 本體一致；用量 API 回 401/403 時再換發重試一次
 - 請求：`GET https://chatgpt.com/backend-api/wham/usage`
 - 認證：`Authorization: Bearer <access_token>` 加 `chatgpt-account-id: <account_id>`
 
@@ -110,7 +124,8 @@ Manapoint 只讀取使用者自己機器上、由各家官方 CLI 寫下的登�
 
 - **token 過期會自動換發。** 用各家公開的 OAuth 換發流程，只動同機同使用者、
   該 CLI 自己管理的同一個憑證檔，並處理 refresh token 輪換與並發寫入。
-  目前已實作 opencode xAI；換發失敗時保留上次數字並顯示指示。
+  目前 Claude Code、Codex、opencode xAI 三家皆已實作；
+  換發失敗時保留上次數字並顯示指示。
 - **不要求 API key 或密碼。**
 - **不寫出 token。** 快取檔與記錄檔都不含憑證。
 

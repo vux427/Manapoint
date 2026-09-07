@@ -1,17 +1,15 @@
 //! Claude Code's five-hour and weekly usage.
 //!
-//! Credentials come from the user's own Claude Code login. When they expire the card
-//! keeps its numbers and shows an instruction; Claude Code refreshes them on its next
-//! run and the panel recovers on its own. See docs/providers.md.
+//! Credentials come from the user's own Claude Code login. Expired access tokens
+//! are refreshed and written back before they can turn the card red; see
+//! [`super::claude_token`].
 
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use serde_json::Value;
 
-use super::{number, object, optional_datetime};
+use super::{claude_token, number, object, optional_datetime};
 use crate::error::{CollectError, CollectResult};
 use crate::model::{ProviderUsage, UsageWindow, UsageWindowKind};
-use crate::paths;
-
 pub const PROVIDER_NAME: &str = "Claude Code";
 
 const USAGE_URL: &str = "https://api.anthropic.com/api/oauth/usage";
@@ -22,17 +20,38 @@ const WINDOW_MAP: [(&str, UsageWindowKind); 2] = [
 ];
 
 pub async fn collect(http: &reqwest::Client) -> CollectResult<ProviderUsage> {
-    let token = read_access_token()?;
+    // Refreshes and persists a stale access token on the way through.
+    let token = claude_token::access_token(http).await?;
 
-    let response = http.get(USAGE_URL).bearer_auth(token).send().await?;
-    if matches!(response.status().as_u16(), 401 | 403) {
-        return Err(CollectError::not_ready(
-            "登入已失效，請在 Claude Code 執行 /login",
-        ));
+    let response = fetch_usage(http, &token).await?;
+    if !matches!(response.status().as_u16(), 401 | 403) {
+        let body = response.error_for_status()?.text().await?;
+        return parse(&body, Utc::now());
     }
 
-    let body = response.error_for_status()?.text().await?;
+    // The token lapsed between the proactive check and the request, or lost a
+    // rotation race. Refresh once and retry before telling the user to log in.
+    let fresh = claude_token::refresh_for_retry(http, &token).await?;
+    let body = fetch_usage(http, &fresh)
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
     parse(&body, Utc::now())
+}
+
+async fn fetch_usage(
+    http: &reqwest::Client,
+    token: &str,
+) -> CollectResult<reqwest::Response> {
+    Ok(http
+        .get(USAGE_URL)
+        .bearer_auth(token)
+        .header("anthropic-beta", "oauth-2025-04-20")
+        .header("User-Agent", "claude-code/2.0.32")
+        .header("accept", "application/json")
+        .send()
+        .await?)
 }
 
 /// Parse the `GET /api/oauth/usage` response. Pure, no IO.
@@ -55,42 +74,10 @@ pub fn parse(json: &str, collected_at: DateTime<Utc>) -> CollectResult<ProviderU
     Ok(ProviderUsage::new(PROVIDER_NAME, windows, collected_at))
 }
 
-fn read_access_token() -> CollectResult<String> {
-    let path = paths::claude_credentials();
-    let text = std::fs::read_to_string(&path)
-        .map_err(|_| CollectError::not_ready("找不到 Claude Code，請先安裝並執行 /login"))?;
-
-    let root: Value = serde_json::from_str(&text)
-        .map_err(|_| CollectError::not_ready("Claude Code 憑證檔讀不懂，請重新執行 /login"))?;
-
-    let oauth = root
-        .get("claudeAiOauth")
-        .filter(|v| v.is_object())
-        .ok_or_else(|| CollectError::not_ready("尚未登入，請在 Claude Code 執行 /login"))?;
-
-    if let Some(expires_ms) = oauth.get("expiresAt").and_then(Value::as_i64) {
-        if Utc
-            .timestamp_millis_opt(expires_ms)
-            .single()
-            .is_some_and(|t| t <= Utc::now())
-        {
-            return Err(CollectError::not_ready(
-                "登入已過期，請開啟 Claude Code 重新整理登入",
-            ));
-        }
-    }
-
-    match oauth.get("accessToken").and_then(Value::as_str) {
-        Some(token) if !token.trim().is_empty() => Ok(token.to_string()),
-        _ => Err(CollectError::not_ready(
-            "尚未登入，請在 Claude Code 執行 /login",
-        )),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::TimeZone;
 
     /// A real response (2026-09-05), extra fields kept so a shape change shows up here.
     const REAL_RESPONSE: &str = r#"

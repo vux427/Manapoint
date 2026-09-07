@@ -1,7 +1,9 @@
 //! Every supported provider. Adding one means registering it here.
 
 pub mod claude;
+pub mod claude_token;
 pub mod codex;
+pub mod codex_token;
 pub mod grok;
 pub mod opencode_go;
 pub mod xai_token;

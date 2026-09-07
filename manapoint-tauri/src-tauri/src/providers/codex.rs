@@ -1,8 +1,9 @@
 //! Codex's five-hour and weekly usage.
 //!
-//! Credentials come from the user's own Codex CLI login; when they lapse the card keeps
-//! its numbers and shows an instruction. The response carries account details such as an
-//! email address — only the usage fields are read, nothing else is retained.
+//! Credentials come from the user's own Codex CLI login. Expired access tokens are
+//! refreshed and written back before they can turn the card red; see
+//! [`super::codex_token`]. The response carries account details such as an email
+//! address — only the usage fields are read, nothing else is retained.
 //!
 //! Premium plans have no five-hour window. A missing or unreadable window is omitted
 //! rather than failing the card.
@@ -10,11 +11,9 @@
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::Value;
 
-use super::object;
-use crate::error::{CollectError, CollectResult};
+use super::{codex_token, object};
+use crate::error::CollectResult;
 use crate::model::{ProviderUsage, UsageWindow, UsageWindowKind};
-use crate::paths;
-
 pub const PROVIDER_NAME: &str = "Codex";
 
 const USAGE_URL: &str = "https://chatgpt.com/backend-api/wham/usage";
@@ -23,21 +22,38 @@ const ONE_DAY: i64 = 86_400;
 const TEN_DAYS: i64 = 864_000;
 
 pub async fn collect(http: &reqwest::Client) -> CollectResult<ProviderUsage> {
-    let (access_token, account_id) = read_credentials()?;
+    // Refreshes and persists a stale access token on the way through.
+    let (access_token, account_id) = codex_token::credentials(http).await?;
 
-    let response = http
+    let response = fetch_usage(http, &access_token, &account_id).await?;
+    if !matches!(response.status().as_u16(), 401 | 403) {
+        let body = response.error_for_status()?.text().await?;
+        return parse(&body, Utc::now());
+    }
+
+    // The token lapsed between the proactive check and the request, or lost a
+    // rotation race. Refresh once and retry before telling the user to log in.
+    let (fresh_token, fresh_account) =
+        codex_token::refresh_for_retry(http, &access_token).await?;
+    let body = fetch_usage(http, &fresh_token, &fresh_account)
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
+    parse(&body, Utc::now())
+}
+
+async fn fetch_usage(
+    http: &reqwest::Client,
+    access_token: &str,
+    account_id: &str,
+) -> CollectResult<reqwest::Response> {
+    Ok(http
         .get(USAGE_URL)
         .bearer_auth(access_token)
         .header("chatgpt-account-id", account_id)
         .send()
-        .await?;
-
-    if matches!(response.status().as_u16(), 401 | 403) {
-        return Err(CollectError::not_ready("登入已過期，請重新執行 codex 登入"));
-    }
-
-    let body = response.error_for_status()?.text().await?;
-    parse(&body, Utc::now())
+        .await?)
 }
 
 /// Parse the `GET /backend-api/wham/usage` response. Pure, no IO.
@@ -85,27 +101,6 @@ fn kind_for(window_seconds: i64) -> UsageWindowKind {
 fn read_reset_at(window: &Value) -> Option<DateTime<Utc>> {
     let seconds = window.get("reset_at")?.as_i64()?;
     Utc.timestamp_opt(seconds, 0).single()
-}
-
-fn read_credentials() -> CollectResult<(String, String)> {
-    let text = std::fs::read_to_string(paths::codex_auth())
-        .map_err(|_| CollectError::not_ready("找不到 Codex CLI，請先安裝並登入"))?;
-
-    let root: Value = serde_json::from_str(&text)
-        .map_err(|_| CollectError::not_ready("Codex 憑證檔讀不懂，請重新執行 codex 登入"))?;
-
-    let tokens = root
-        .get("tokens")
-        .filter(|v| v.is_object())
-        .ok_or_else(|| CollectError::not_ready("尚未登入，請執行 codex 登入"))?;
-
-    let access = tokens.get("access_token").and_then(Value::as_str).unwrap_or("");
-    let account = tokens.get("account_id").and_then(Value::as_str).unwrap_or("");
-
-    if access.trim().is_empty() || account.trim().is_empty() {
-        return Err(CollectError::not_ready("登入資料不完整，請重新執行 codex 登入"));
-    }
-    Ok((access.to_string(), account.to_string()))
 }
 
 #[cfg(test)]
