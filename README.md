@@ -5,9 +5,9 @@
 
 ![Manapoint](docs/images/screenshot.webp)
 
-四家 AI 訂閱的用量，一個懸浮小面板全看到。
+五家 AI 訂閱的用量，一個懸浮小面板全看到。
 
-Manapoint 是基於 Rust + Tauri 2 開發的桌面小工具，常駐顯示 opencode Go、Claude Code、Codex、Grok
+Manapoint 是基於 Rust + Tauri 2 開發的桌面小工具，常駐顯示 opencode Go、Claude Code、Codex、Grok、Antigravity
 的用量窗口（5 小時 / 每週 / 每月），右鍵可重新整理、開設定、結束。
 
 ## 下載
@@ -49,7 +49,7 @@ Manapoint 只讀各家 CLI 已經存在本機的登入狀態，並對各家官�
 
 ### 橫向排列
 
-精簡風格橫向時把四家壓成一列：
+精簡風格橫向時把各家壓成一列：
 
 <img src="docs/images/theme-compact-h.png" width="440">
 
@@ -95,7 +95,8 @@ node --test manapoint-tauri/ui/*.test.mjs
 ```powershell
 # 例：Azure Trusted Signing，{} 會換成要簽的檔案
 $env:MANAPOINT_SIGN_CMD = 'signtool sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib "C:\ats\Azure.CodeSigning.Dlib.dll" /dmdf "C:\ats\metadata.json" "{}"'
-pwsh -File scriptselease.ps1
+pwsh -File scripts
+elease.ps1
 ```
 
 需要 Rust 1.82+ 與 Node 18+（Node 只用來跑測試，介面本身沒有任何 npm 依賴）。
@@ -108,7 +109,7 @@ manapoint-tauri/
   CONTRACT.md          前後端合約：命令、事件、DOM 結構、版面規則
   ui/                  原生 HTML/CSS/ES module，沒有打包步驟
   src-tauri/src/
-    providers/         四家的取數與解析，純函式好測
+    providers/         各家的取數與解析，純函式好測
     snap.rs            邊緣吸附的純幾何
     win.rs             Win32：工作區查詢、拖曳中即時吸附
     lib.rs             視窗、托盤、指令、輪詢

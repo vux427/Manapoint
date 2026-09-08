@@ -5,9 +5,9 @@
 
 ![Manapoint](docs/images/screenshot.webp)
 
-Four AI subscriptions, one floating panel.
+Five AI subscriptions, one floating panel.
 
-Manapoint is a Rust + Tauri 2 desktop widget that keeps opencode Go, Claude Code, Codex and Grok
+Manapoint is a Rust + Tauri 2 desktop widget that keeps opencode Go, Claude Code, Codex, Grok and Antigravity
 usage windows (5-hour / weekly / monthly) on screen. Right-click to refresh, open settings, or quit.
 
 ## Download
@@ -53,7 +53,7 @@ it is usually cleared within a few days.
 
 ### Horizontal arrangement
 
-The Compact theme collapses all four providers onto a single row:
+The Compact theme collapses every provider onto a single row:
 
 <img src="docs/images/theme-compact-h.png" width="440">
 
@@ -104,7 +104,8 @@ it never passes quietly.
 ```powershell
 # Example: Azure Trusted Signing. {} is replaced with the file to sign.
 $env:MANAPOINT_SIGN_CMD = 'signtool sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib "C:\ats\Azure.CodeSigning.Dlib.dll" /dmdf "C:\ats\metadata.json" "{}"'
-pwsh -File scriptselease.ps1
+pwsh -File scripts
+elease.ps1
 ```
 
 Requires Rust 1.82+ and Node 18+ (Node only runs the tests; the UI itself has zero npm
@@ -117,7 +118,7 @@ manapoint-tauri/
   CONTRACT.md          frontend/backend contract: commands, events, DOM, layout rules
   ui/                  plain HTML/CSS/ES modules, no build step
   src-tauri/src/
-    providers/         the four collectors and parsers, pure functions where it counts
+    providers/         the collectors and parsers, pure functions where it counts
     snap.rs            edge-snapping geometry
     win.rs             Win32: work area, live snapping during a drag
     lib.rs             window, tray, commands, polling

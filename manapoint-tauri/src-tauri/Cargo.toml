@@ -1,6 +1,6 @@
 [package]
 name = "manapoint"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.82"
 description = "AI 訂閱用量的桌面浮動面板"
@@ -21,7 +21,7 @@ serde_json = "1.0.151"
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-single-instance = "2"
 tokio = { version = "1.53.1", features = ["time", "sync"] }
-windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_HiDpi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Security_Credentials", "Win32_UI_HiDpi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 winreg = "0.56.0"
 
 # 常駐小掛件：體積優先。LTO + 單一 codegen unit + panic=abort，

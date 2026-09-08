@@ -60,7 +60,9 @@ String enum, exactly three values: `"Rolling"` | `"Weekly"` | `"Monthly"`.
 `{ d, rule }` where `rule` is used directly as the SVG `fill-rule`. When `icon` is null,
 render `badge.text` instead.
 
-Provider ids are fixed: `opencode-go`, `claude-code`, `codex`, `grok`.
+Provider ids are fixed: `opencode-go`, `claude-code`, `codex`, `grok`,
+`antigravity-gemini`, `antigravity-3p`. The two Antigravity ids are one subscription
+with two independent quota pools, so they are two cards sharing one badge.
 
 ### 1.4 CardState
 

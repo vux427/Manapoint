@@ -1,5 +1,7 @@
 //! Every supported provider. Adding one means registering it here.
 
+pub mod antigravity;
+pub mod antigravity_token;
 pub mod claude;
 pub mod claude_token;
 pub mod codex;
@@ -19,6 +21,10 @@ pub const OPENCODE_GO: &str = "opencode-go";
 pub const CLAUDE_CODE: &str = "claude-code";
 pub const CODEX: &str = "codex";
 pub const GROK: &str = "grok";
+/// Antigravity's two pools are one subscription but two independent limits, so each
+/// gets its own card; a single card could only show one of them.
+pub const ANTIGRAVITY_GEMINI: &str = "antigravity-gemini";
+pub const ANTIGRAVITY_3P: &str = "antigravity-3p";
 
 /// The mark on the left of a card: the official glyph on the brand colour.
 /// `icon` is a key into ui/icons.js, which is where the frontend gets the path data.
@@ -41,11 +47,15 @@ pub struct ProviderDescriptor {
     pub badge: Badge,
 }
 
+/// Google blue, from the Antigravity mark.
+const GOOGLE_BLUE: &str = "#4285F4";
+
 const ON_DARK: &str = "#FFFFFF";
 const ON_LIGHT: &str = "#16181C";
 
-/// Three of the four brand colours are near-black and are told apart by glyph shape;
-/// opencode gets a white ground so the row is not one solid black block.
+/// Three of the brand colours are near-black and are told apart by glyph shape;
+/// opencode gets a white ground so the row is not one solid black block, and
+/// Antigravity's two cards share one mark because they share one subscription.
 pub fn all() -> Vec<ProviderDescriptor> {
     vec![
         ProviderDescriptor {
@@ -71,6 +81,18 @@ pub fn all() -> Vec<ProviderDescriptor> {
             name: "Grok",
             credential_hint: "opencode 的 xAI 登入",
             badge: Badge { icon: Some("Grok"), text: None, background: "#1A1A1A", foreground: ON_DARK },
+        },
+        ProviderDescriptor {
+            id: ANTIGRAVITY_GEMINI,
+            name: antigravity::GEMINI_NAME,
+            credential_hint: "Antigravity 登入狀態",
+            badge: Badge { icon: Some("Antigravity"), text: None, background: GOOGLE_BLUE, foreground: ON_DARK },
+        },
+        ProviderDescriptor {
+            id: ANTIGRAVITY_3P,
+            name: antigravity::THIRD_PARTY_NAME,
+            credential_hint: "Antigravity 登入狀態",
+            badge: Badge { icon: Some("Antigravity"), text: None, background: GOOGLE_BLUE, foreground: ON_DARK },
         },
     ]
 }
@@ -103,6 +125,8 @@ pub async fn collect(id: &str, http: &reqwest::Client) -> CollectResult<Provider
         CLAUDE_CODE => claude::collect(http).await,
         CODEX => codex::collect(http).await,
         GROK => grok::collect(http).await,
+        ANTIGRAVITY_GEMINI => antigravity::collect(antigravity::Pool::Gemini, http).await,
+        ANTIGRAVITY_3P => antigravity::collect(antigravity::Pool::ThirdParty, http).await,
         other => Err(CollectError::failed(format!("{other} 的取數器尚未實作。"))),
     }
 }
@@ -154,7 +178,17 @@ mod tests {
         let order = vec!["grok".to_string(), "codex".to_string()];
         let ids: Vec<&str> = in_order(Some(&order)).iter().map(|p| p.id).collect();
 
-        assert_eq!(vec!["grok", "codex", "opencode-go", "claude-code"], ids);
+        assert_eq!(
+            vec![
+                "grok",
+                "codex",
+                "opencode-go",
+                "claude-code",
+                "antigravity-gemini",
+                "antigravity-3p"
+            ],
+            ids
+        );
     }
 
     /// A settings file holding a since-removed id must not break the list.
@@ -164,7 +198,7 @@ mod tests {
         let ids: Vec<&str> = in_order(Some(&order)).iter().map(|p| p.id).collect();
 
         assert_eq!("codex", ids[0]);
-        assert_eq!(4, ids.len());
+        assert_eq!(all().len(), ids.len());
     }
 
     #[test]

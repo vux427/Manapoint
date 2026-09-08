@@ -1,7 +1,8 @@
 # Provider 取數對照表
 
-四家 AI 訂閱的用量來源。全部讀本機既有的登入憑證，不需要另外申請 API key，
-不需要帳號密碼。所有 endpoint 皆為非公開介面，可能隨對方改版而失效。
+五家 AI 訂閱的用量來源，共六張卡（Antigravity 的兩個額度池各一張）。
+全部讀本機既有的登入憑證，不需要另外申請 API key，不需要帳號密碼。
+所有 endpoint 皆為非公開介面，可能隨對方改版而失效。
 
 ## opencode Go
 
@@ -109,11 +110,107 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
 
 注意：`/v1/user` 回應含 email、姓名、userId 等個資，本專案不呼叫該端點。
 
+## Antigravity
+
+已驗證（2026-09-09）。Antigravity CLI 的執行檔是 `agy`。
+
+- 憑證：**不是檔案**，是 OS keyring。`agy` 透過 go-keyring 存在 service `gemini`、
+  account `antigravity` 底下；Windows 上就是憑證管理員的一般認證
+  `gemini:antigravity`，blob 是 UTF-8 JSON：
+
+  ```json
+  { "token": { "access_token": "ya29…", "token_type": "Bearer",
+               "refresh_token": "1//…", "expiry": "2026-09-09T00:37:23.75+08:00" },
+    "auth_method": "consumer" }
+  ```
+
+- 換發：`POST https://oauth2.googleapis.com/token`（form：`client_id`／
+  `client_secret`／`refresh_token`／`grant_type=refresh_token`）。client 是
+  Antigravity 的公開 installed-app OAuth client，id 為
+  `1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com`，
+  Google 的流程要求連 secret 一起送——installed-app client 的 secret 本質上無法保密，
+  所以它就夾在 `agy` 執行檔裡，不是使用者的祕密。
+- **換發到的 token 不寫回 keyring。** 那裡是 `agy` 自己的登入狀態，Google 的
+  refresh token 又會輪換，寫進去可能把 CLI 踢出它自己的 session。新 token 只留在
+  Manapoint 的行程記憶體裡（常駐程式，一次換發夠用很多輪；重啟就再換一次），
+  這同時守住下面「不寫出 token」那條。
+- 到期前 5 分鐘主動換發；用量 API 回 401/403 時再換發重試一次。
+- 請求：`POST /v1internal:retrieveUserQuotaSummary`，host **依序**試
+  `daily-cloudcode-pa.googleapis.com`，失敗才退到 `cloudcode-pa.googleapis.com`。
+  **順序有意義**（見下方「兩台 host」）。
+- 認證：`Authorization: Bearer <access_token>`，另需 `User-Agent: antigravity`
+  （端點會挑 client 名稱：`agy` 或不帶 UA 都回 403）
+- 請求 body 只有 `project` 一個合法欄位，且給不給都不影響回傳
+- 成本：純讀，不消耗配額
+
+回傳：
+
+```json
+{ "groups": [
+    { "displayName": "Gemini Models",
+      "description": "Models within this group: Gemini Flash, Gemini Pro",
+      "buckets": [
+        { "bucketId": "gemini-weekly", "window": "weekly",
+          "resetTime": "2026-09-15T16:02:03Z", "remainingFraction": 1 },
+        { "bucketId": "gemini-5h", "window": "5h",
+          "resetTime": "2026-09-08T21:02:03Z", "remainingFraction": 1 }
+      ] },
+    { "displayName": "Claude and GPT models",
+      "description": "Models within this group: Claude Opus, Claude Sonnet, GPT-OSS",
+      "buckets": [
+        { "bucketId": "3p-weekly",  "window": "weekly", "remainingFraction": 0.93986666 },
+        { "bucketId": "3p-5h",      "window": "5h",     "remainingFraction": 0.8302704  }
+      ] } ] }
+```
+
+四個 bucket 分兩池，**同池共用一組 5 小時與每週上限**：
+
+| bucketId | 池 | 窗口 | Manapoint 的卡 |
+|---|---|---|---|
+| `gemini-5h`     | Gemini Models        | 5 小時 | Antigravity Gemini |
+| `gemini-weekly` | Gemini Models        | 每週   | Antigravity Gemini |
+| `3p-5h`         | Claude and GPT models| 5 小時 | Antigravity Claude/GPT |
+| `3p-weekly`     | Claude and GPT models| 每週   | Antigravity Claude/GPT |
+
+兩池的上限與重置時刻各自獨立（實測連 reset 秒數都不同），一張卡只有 5H 與 WEEK
+兩格放不下四個數字，所以拆成兩張卡。**bucket 一律用 `bucketId` 認，不看順序**——
+group 的順序不固定，實測 weekly 還排在 5h 前面。`remainingFraction` 是「剩下」的比例，
+面板要顯示的已用量是 `1 - remainingFraction`。沒有該 bucket 的帳號直接略過那一格；
+整池都沒有就顯示說明文字，不畫一條 0%。
+
+### 兩台 host
+
+`agy` 自己打的是 `daily-cloudcode-pa`，**只有那台在計 Gemini 這一池**。
+`cloudcode-pa` 對 Gemini 兩格回的是佔位值：`remainingFraction` 恆為 1、
+`resetTime` 每次查都重算成「現在 + 窗口長度」——那是窗口從未開始計數的樣子。
+連 Claude/GPT 那池也略舊。2026-09-09 相隔數秒的實測：
+
+| bucket | daily-cloudcode-pa | cloudcode-pa |
+|---|---|---|
+| `gemini-5h`     | rem=0.370169，reset 20:45:45Z（固定） | rem=1，reset = now+5h |
+| `gemini-weekly` | rem=0.8950281 | rem=1，reset = now+7d |
+| `3p-weekly`     | rem=0.6663967 | rem=0.6612584 |
+| `3p-5h`         | rem=0，reset 20:58:51Z | rem=0，reset 20:58:51Z |
+
+同時間 `agy` 的 `/usage` 顯示 Gemini 5h 剩 48.69%（reset 4h13m 後 = 20:45:45Z）、
+3p weekly 剩 66.64%——兩個數字都只對得上 daily 那台。
+`cloudcode-pa` 留著當退路，是為了 daily 哪天消失；退到它時 Gemini 會低報成 0%。
+
+一次輪詢兩張卡只打一次網路：回應在模組內共用 30 秒（見 `antigravity.rs` 的
+`SUMMARY_TTL`），遠短於 5 分鐘的輪詢週期。
+
+注意：此端點的回應不含 email、user_id 等個資，只有上面這些 bucket 欄位。
+另有 `loadCodeAssist`（回 tier，可用）／`retrieveUserQuota`／`fetchAvailableModels`
+（這兩個對消費者帳號回 403），本專案不需要，未實作。
+
 ---
 
 Claude / Codex / Grok 三家的 endpoint 出處為 MIT 授權的
 [RiahStudio/riah-usage](https://github.com/RiahStudio/riah-usage)
 （`collect-usage.js`、`lib/pull-claude.py`、`lib/parse-grok-billing.js`）。
+Antigravity 的 endpoint 與 OAuth client 出處為 MIT 授權的
+[lamchun1110/UsageDeck](https://github.com/lamchun1110/UsageDeck)
+（`src-tauri/src/providers/antigravity`），憑證位置與回應形狀本專案另行實機驗證。
 本專案為獨立實作，未複製其程式碼。
 
 ---
@@ -126,6 +223,8 @@ Manapoint 只讀取使用者自己機器上、由各家官方 CLI 寫下的登�
   該 CLI 自己管理的同一個憑證檔，並處理 refresh token 輪換與並發寫入。
   目前 Claude Code、Codex、opencode xAI 三家皆已實作；
   換發失敗時保留上次數字並顯示指示。
+  Antigravity 是唯一例外：它的憑證在 OS keyring 而非檔案，換發到的 token
+  只留在記憶體，不寫回 keyring（理由見上）。
 - **不要求 API key 或密碼。**
 - **不寫出 token。** 快取檔與記錄檔都不含憑證。
 
