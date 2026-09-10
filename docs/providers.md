@@ -96,17 +96,31 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
   加 `x-xai-token-auth: xai-grok-cli` 與 `accept: application/json`
  （Grok CLI 本身也是這組 header）
 
-回傳的 `config` 有兩種訊號，兩種都吃：
+回傳的 `config` 有三種訊號，每週池優先順序為
+`creditUsagePercent` → `productUsage[].usagePercent` 取最大：
 
 - credits 形狀：`creditUsagePercent` 為每週點數池已用百分比，
   重置時間先看 `currentPeriod.end`，沒有才退回 `billingPeriodEnd`。
   實測確認：opencode 授權在某些帳號上月結額度為 0，
   但這個每週百分比有數字——這就是之前顯示「沒有額度」的原因：
   舊版只問了月結形狀。
+- SuperGrok（統一帳單）形狀：`isUnifiedBillingUser: true` 且
+  `currentPeriod.type` 為 `USAGE_PERIOD_TYPE_WEEKLY` 的帳號，
+  有時省略頂層 `creditUsagePercent`，改以
+  `productUsage: [{"product": "GrokBuild", "usagePercent": n}]`
+  逐產品回報（沒有數字的產品如 `{"product": "GrokChat"}` 直接略過）。
 - 原形狀：`monthlyLimit.val`／`used.val`（皆包在 `{ "val": n }` 裡）。
   只有 `monthlyLimit > 0` 才算得出比例，此時多顯示一欄 MONTH。
 
-兩種訊號都沒有時顯示說明文字而非畫一條 0%。
+三種訊號都沒有時顯示說明文字而非畫一條 0%，但有一個例外：
+xAI 會省略零值的百分比欄位，因此統一帳單加每週週期、
+且所有金額（`monthlyLimit`／`used`／`onDemandCap`／`onDemandUsed`／
+`prepaidBalance`）全為零時，視為全新未用池，顯示 Weekly 0% 並附
+「本週期尚無用量」（實測 2026-09-10 的 SuperGrok 新週期即如此）。
+任一金額非零卻無百分比時仍只顯示
+「SuperGrok 統一帳單，帳務端未回傳用量百分比（下次重置 YYYY-MM-DD）」，
+絕不合成 0%——帳務端沒給數字不代表訂閱不存在，
+Opencode 聊天走的是同一個 token 的 chat 通道，不受此影響。
 
 注意：`/v1/user` 回應含 email、姓名、userId 等個資，本專案不呼叫該端點。
 

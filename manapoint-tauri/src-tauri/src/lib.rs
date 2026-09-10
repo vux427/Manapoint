@@ -185,7 +185,11 @@ async fn collect_all(state: &AppState) -> Vec<CardState> {
                 Some(Ok(usage)) => {
                     card.windows = usage.windows.clone();
                     card.note = usage.note.clone();
-                    last_good.insert(d.id.to_string(), usage);
+                    // A note-only reading carries no numbers: showing it is honest,
+                    // but it must not wipe the last real numbers from the cache.
+                    if !usage.windows.is_empty() {
+                        last_good.insert(d.id.to_string(), usage);
+                    }
                 }
                 // A stale reading with an explanation beats an empty card: the CLI
                 // usually re-authenticates itself and the next poll recovers.
