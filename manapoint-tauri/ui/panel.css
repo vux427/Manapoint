@@ -44,12 +44,12 @@ body {
 /* Shrink-wrap: vertical has a fixed theme width, horizontal follows content width. */
 #panel[data-layout="vertical"],
 .panel[data-layout="vertical"] {
-  width: 218px;
+  width: 224px;
 }
 
 #panel[data-layout="vertical"][data-mono="true"],
 .panel[data-layout="vertical"][data-mono="true"] {
-  width: 230px;
+  width: 236px;
 }
 
 #panel[data-layout="vertical"][data-meter="text"],
@@ -128,13 +128,13 @@ body {
 #panel[data-layout="horizontal"][data-meter="segmented"] #cards .card,
 .panel[data-layout="horizontal"][data-meter="segmented"] #cards .card {
   flex: none;
-  width: 218px;
+  width: 224px;
 }
 
 #panel[data-layout="horizontal"][data-meter="segmented"][data-mono="true"] #cards .card,
 .panel[data-layout="horizontal"][data-meter="segmented"][data-mono="true"] #cards .card {
   flex: none;
-  width: 230px;
+  width: 236px;
 }
 
 /* Compact dividers use borders between segments, not extra elements. */
@@ -191,7 +191,7 @@ body {
 #panel .meter,
 .panel .meter {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 30px 20px;
+  grid-template-columns: 44px minmax(0, 1fr) 30px 28px;
   align-items: center;
   min-width: 0;
 }
@@ -291,6 +291,17 @@ body {
   text-align: left;
   padding-left: 4px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+#panel .meter__reset:not(:empty)::before,
+.panel .meter__reset:not(:empty)::before {
+  content: "|";
+  margin-right: 4px;
+  color: var(--border);
+  font-size: 9px;
+  opacity: 0.9;
 }
 
 /* Badge: centred glyph on the provider colour. */
