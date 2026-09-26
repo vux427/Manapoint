@@ -31,7 +31,7 @@ call them outright malware — that is a false positive. To check the file you h
 tampered with, compare it against the SHA-256 listed on the Releases page:
 
 ```powershell
-Get-FileHash .\Manapoint-0.3.0-win.zip -Algorithm SHA256
+Get-FileHash .\Manapoint-0.3.1-win.zip -Algorithm SHA256
 ```
 
 Manapoint only reads the sign-in state each vendor's CLI already stores on your machine and

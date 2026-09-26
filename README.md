@@ -28,7 +28,7 @@ Manapoint 還沒有付費的程式碼簽章憑證。Windows Defender 與 SmartSc
 沒被動過，跟 Releases 頁面列的 SHA-256 對一下：
 
 ```powershell
-Get-FileHash .\Manapoint-0.3.0-win.zip -Algorithm SHA256
+Get-FileHash .\Manapoint-0.3.1-win.zip -Algorithm SHA256
 ```
 
 Manapoint 只讀各家 CLI 已經存在本機的登入狀態，並對各家官方 API 發請求，取數邏輯全在

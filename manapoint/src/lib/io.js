@@ -103,12 +103,16 @@ export async function request(url, { method = "GET", headers = {}, body, form, j
 // secret (URL, headers, body) travels on curl's stdin as a config file, never on
 // the command line where other processes could read it.
 
-let spawner = (argv, opts) => rt().spawn(argv, opts);
+// Kept on globalThis, not in a module variable: txiki can load this file twice under
+// different path spellings (./lib/io.js from main, ../lib/io.js from providers), and
+// a module-level setting would reach only main's copy.
+const SPAWNER = Symbol.for("manapoint.spawner");
+const spawner = (argv, opts) => (globalThis[SPAWNER] ?? ((a, o) => rt().spawn(a, o)))(argv, opts);
 
 /** The app's console-less spawn (app.spawnHidden): a built GUI app would otherwise
- * flash a console window for every curl run. */
+ * open a console window for every curl run. */
 export function setSpawner(fn) {
-  spawner = fn;
+  globalThis[SPAWNER] = fn;
 }
 
 /** A curl config string: backslashes and quotes escaped, line breaks flattened. */

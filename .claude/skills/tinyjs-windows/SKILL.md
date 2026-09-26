@@ -48,7 +48,11 @@ cost real debugging.
   (PW_RENDERFULLCONTENT) instead — it renders the WebView2 content regardless.
 - A module can be instantiated twice when imported via different relative
   spellings; never rely on `instanceof` for your own error classes across
-  modules — check a `kind` field instead.
+  modules — check a `kind` field instead. The same goes for module-level
+  mutable state set from `main.js` (e.g. a `setSpawner(app.spawnHidden)`
+  hook): `./lib/io.js` and `../lib/io.js` are separate instances, so the
+  setting silently misses the copy providers use. Keep such hooks on
+  `globalThis[Symbol.for('app.key')]`.
 - Shell heredocs can mangle backslashes in JS written through them (regexes
   like `/\\/g`, `﻿` escapes). Write such code with the Edit/Write tools, or
   avoid the escapes (`String.fromCharCode(92)`, `.split(x).join(y)`), and run
@@ -135,7 +139,10 @@ edge. Escaping then always costs exactly one threshold.
   `%SystemRoot%\System32\curl.exe` — NOT the `curl.exe` on PATH, which Git's
   mingw build may shadow — with `--config -`, writing url/header/data-binary to
   stdin so tokens never appear in argv. Spawn through `app.spawnHidden` inside
-  the app (plain `tjs.spawn` flashes a console from a GUI exe). Pipe API:
+  the app (plain `tjs.spawn` from the GUI exe opens a console — on Windows 11
+  it shows up as a Windows Terminal window titled with the exe path). To
+  verify, poll `EnumWindows` for new visible windows while the app starts
+  (`CASCADIA_HOSTING_WINDOW_CLASS` / `PseudoConsoleWindow` = leak). Pipe API:
   `tjs.spawn(argv, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' })` →
   `proc.stdin.getWriter()`, `proc.stdout.getReader()`, `await proc.wait()`
   (`{ exit_status }`). Keep `-w` in argv; escapes inside config strings are fragile.
