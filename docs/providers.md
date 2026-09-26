@@ -8,7 +8,26 @@
 
 已驗證（2026-09-05）。
 
-- 憑證：`~/.local/share/opencode/auth.json` → `["opencode-go"].key`（`sk-` 開頭）
+- 憑證（依序讀取，同一把 key 只算一個帳號）：
+  - `~/.local/share/opencode/auth.json` → `["opencode-go"].key`（`sk-` 開頭；`opencode auth login` → OpenCode Go）
+  - 同檔 `["opencode"].key`（`opencode auth login` → OpenCode，也就是 Zen／console 的 API key）。
+    伺服器端與 Go 共用同一張 key 表，所以同一個 `/usage` 端點也吃這把 key；
+    該 workspace 沒有 Go 訂閱時回 **403**（`EntitlementError`），面板顯示「此帳號沒有 Go 訂閱」而非錯誤
+  - `~/.config/opencode/opencode-go-accounts.json`（opencode-go-multi-auth 外掛：
+    `{ version: 1, accounts: [{ apiKey, label, enabled }] }`，`enabled: false` 略過）
+  - `opencode.db` 的 `credential` 表（新版 opencode 把登入都存在這裡，auth.json 不再更新）
+    裡 `integration_id = 'opencode'` 的列：console 登入（裝置碼 OAuth，
+    `value = { type:'oauth', access, refresh, expires, metadata:{ server, accountID, email, orgID, orgName } }`）
+    或服務帳號金鑰（`type:'key'`）
+- console 帳號的用量不在 `/zen`（實測 2026-09-26）：
+  1. `GET {server}/api/config`（`Authorization: Bearer <console access>`、`x-org-id: <orgID>`）
+     回 `config.provider["opencode-go"]`：`api` = `https://opencode.ai/inference/go/openai/v1`、
+     `options.headers` = `{ "x-opencode-org-id": … }`；`options.apiKey` 只是樣板
+     `{env:OPENCODE_CONSOLE_TOKEN}`，也就是 console access token 本身
+  2. `GET https://opencode.ai/inference/go/v1/usage`，帶同一個 token 與 `x-opencode-org-id`，
+     回應形狀與 `/zen/go/v1/usage` 相同
+- console token 約 30 天到期；到期前以 `POST {server}/auth/device/token`
+  （`{grant_type:"refresh_token", refresh_token, client_id:"opencode-cli"}`）換發並寫回該列
 - 請求：`GET https://opencode.ai/zen/go/v1/usage`
 - 認證：`Authorization: Bearer <key>`
 - 成本：純讀，不消耗配額
@@ -38,6 +57,11 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
 此 `/usage` 路徑未見於官方文件，是探測得出的。
 
 ## Claude Code
+
+> 所有 Anthropic 請求改走系統 `curl.exe`（URL、header、body 經 stdin 設定檔傳入，不上命令列）：
+> tinyjs 後端的 fetch 一定會帶 `Origin` header，Anthropic 視為瀏覽器 CORS 請求，
+> 組織設定不允許時直接回 401「CORS requests are not allowed for this Organization」，
+> 加 `anthropic-dangerous-direct-browser-access` 也無效。
 
 已驗證（2026-09-05 取數；換發流程對照 MIT 授權的 riah-usage `lib/pull-claude.py`）。
 
@@ -210,8 +234,8 @@ group 的順序不固定，實測 weekly 還排在 5h 前面。`remainingFractio
 3p weekly 剩 66.64%——兩個數字都只對得上 daily 那台。
 `cloudcode-pa` 留著當退路，是為了 daily 哪天消失；退到它時 Gemini 會低報成 0%。
 
-一次輪詢兩張卡只打一次網路：回應在模組內共用 30 秒（見 `antigravity.rs` 的
-`SUMMARY_TTL`），遠短於 5 分鐘的輪詢週期。
+一次輪詢兩張卡只打一次網路：回應在模組內共用 30 秒（見 `antigravity.js` 的
+`SUMMARY_TTL_MS`），遠短於 5 分鐘的輪詢週期。
 
 注意：此端點的回應不含 email、user_id 等個資，只有上面這些 bucket 欄位。
 另有 `loadCodeAssist`（回 tier，可用）／`retrieveUserQuota`／`fetchAvailableModels`
@@ -226,6 +250,37 @@ Antigravity 的 endpoint 與 OAuth client 出處為 MIT 授權的
 [lamchun1110/UsageDeck](https://github.com/lamchun1110/UsageDeck)
 （`src-tauri/src/providers/antigravity`），憑證位置與回應形狀本專案另行實機驗證。
 本專案為獨立實作，未複製其程式碼。
+
+---
+
+## 取數途徑與多帳號
+
+每一家都可能有好幾條取數途徑（自家 CLI、opencode 代存的登入、多帳號外掛）。規則：
+
+1. 找得到的途徑全部同時嘗試，依優先順序排列（自家 CLI 優先，其次 opencode，再來外掛）
+2. 只要有任何一條拿到數字，其餘失敗的途徑一律忽略
+3. 拿到數字的途徑若其實是同一個帳號（帳號 id／email 相同，無法辨識時看數字與重置時間是否一致），合併成一個
+4. 只有全部途徑都失敗，卡片才顯示錯誤（用優先順序最高那條的原因）
+
+| 家 | 途徑（優先順序） |
+|---|---|
+| opencode Go | auth.json `opencode-go`、`opencode`（Zen）；opencode.db console 登入／服務金鑰；opencode-go-multi-auth 外掛 |
+| Claude Code | `~/.claude/.credentials.json`；opencode 的 `anthropic` 登入（opencode.db 或 auth.json） |
+| Codex | `~/.codex/auth.json`；opencode 的 `openai` 登入（帳號 id 取自登入或 JWT） |
+| Grok | opencode.db 的 `xai` 列；auth.json `xai`（舊版） |
+| Antigravity | agy keyring；opencode 的 `google` 登入；opencode-antigravity-multi-auth 外掛 |
+
+opencode 代存的 OAuth 登入換發後寫回原處（opencode.db 以交易合併該列 `value`；auth.json 只動該節點），
+因為這些廠商會輪換 refresh token，不寫回會把 opencode 登出。
+
+同一家找到兩個以上帳號時，卡片內每個帳號一組 bar，組前有小標（帳號標籤）；
+精簡風格則每個帳號一列。只有一個帳號時畫面與單帳號版完全相同。
+
+標籤：opencode Go 為 `Go`／`Zen`／console 組織名／外掛 `label`；Antigravity 為 `agy`／email；
+其餘取 opencode credential 列的 label。外掛檔案：`~/.config/opencode/opencode-go-accounts.json`
+（`{ accounts: [{ apiKey, label, enabled }] }`）、`%APPDATA%opencodeantigravity-accounts.json`
+（`{ accounts: [{ refreshToken, email }] }`）。
+外掛帳號只有 refresh token，Manapoint 每次啟動換發一次、只存在記憶體，不寫回外掛檔案。
 
 ---
 

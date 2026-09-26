@@ -1,0 +1,27 @@
+[
+  { "id": "opencode-go", "name": "opencode Go",
+    "badge": { "icon": "OpenCode", "text": null, "background": "#F2F2F2", "foreground": "#16181C" },
+    "windows": [
+      { "kind": "Rolling", "percent": 12, "resetsAt": "2026-09-26T12:00:00Z", "account": "Go" },
+      { "kind": "Weekly", "percent": 48, "resetsAt": "2026-09-28T00:00:00Z", "account": "Go" },
+      { "kind": "Monthly", "percent": 61, "resetsAt": "2026-10-10T00:00:00Z", "account": "Go" },
+      { "kind": "Rolling", "percent": 3, "resetsAt": "2026-09-26T13:00:00Z", "account": "work" },
+      { "kind": "Weekly", "percent": 88, "resetsAt": "2026-09-29T00:00:00Z", "account": "work" },
+      { "kind": "Monthly", "percent": 30, "resetsAt": "2026-10-12T00:00:00Z", "account": "work" }
+    ],
+    "note": "Zen：此帳號沒有 Go 訂閱", "error": null },
+  { "id": "claude-code", "name": "Claude Code",
+    "badge": { "icon": "Claude", "text": null, "background": "#D97757", "foreground": "#FFFFFF" },
+    "windows": [
+      { "kind": "Rolling", "percent": 45, "resetsAt": "2026-09-26T11:00:00Z" },
+      { "kind": "Weekly", "percent": 12, "resetsAt": "2026-10-01T00:00:00Z" }
+    ], "note": null, "error": null },
+  { "id": "antigravity-gemini", "name": "Antigravity Gemini",
+    "badge": { "icon": "Antigravity", "text": null, "background": "#4285F4", "foreground": "#FFFFFF" },
+    "windows": [
+      { "kind": "Rolling", "percent": 0, "resetsAt": "2026-09-26T14:00:00Z", "account": "agy" },
+      { "kind": "Weekly", "percent": 20, "resetsAt": "2026-10-02T00:00:00Z", "account": "agy" },
+      { "kind": "Rolling", "percent": 66, "resetsAt": "2026-09-26T15:00:00Z", "account": "b@example.com" },
+      { "kind": "Weekly", "percent": 71, "resetsAt": "2026-10-02T00:00:00Z", "account": "b@example.com" }
+    ], "note": null, "error": null }
+]

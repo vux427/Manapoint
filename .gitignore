@@ -1,13 +1,9 @@
-# Rust / Cargo
-target/
-**/*.rs.bk
-*.pdb
+# tinyjs build output
+manapoint/.build/
+manapoint/dist/
+dist/
 
-# Tauri build output and generated schemas
-manapoint-tauri/src-tauri/gen/
-manapoint-tauri/src-tauri/target/
-
-# Node (only ever a dev-time Tauri CLI; the UI itself ships no dependencies)
+# Node (only ever used to run the tests; the app ships no npm dependencies)
 node_modules/
 npm-debug.log*
 
@@ -24,4 +20,3 @@ Thumbs.db
 usage-snapshot.json
 settings.json
 *.env
-dist/

@@ -1,93 +1,93 @@
 <#
 .SYNOPSIS
-  Build, sign and stage the portable Manapoint.exe for a GitHub release.
+  Build Manapoint with tinyjs and stage the portable zip for a GitHub release.
 
 .DESCRIPTION
+  tinyjs builds a portable folder: Manapoint.exe (the compiled txiki.js backend,
+  with the frontend and icon bundled inside) plus launcher.exe (the WebView2
+  window). Both must ship side by side, so the release artefact is a zip of that
+  folder, and this script prints its SHA-256 for the release notes.
+
   An unsigned, zero-reputation executable is what makes Microsoft Defender and
-  SmartScreen flag Manapoint, so this script refuses to stage silently: it signs
-  the binary when a signing command is configured and reports loudly when it is
-  not. It also prints the SHA-256 so the release notes can carry a hash users
-  are able to verify.
-
-  Configure signing by setting MANAPOINT_SIGN_CMD to a command line containing
-  {} where the target file goes, for example Azure Trusted Signing:
-
-    $env:MANAPOINT_SIGN_CMD = 'signtool sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib "C:\ats\Azure.CodeSigning.Dlib.dll" /dmdf "C:\ats\metadata.json" "{}"'
-
-  or a certificate already in the local store:
+  SmartScreen flag an app, so the script signs launcher.exe when MANAPOINT_SIGN_CMD
+  is set and reports loudly when it is not. Manapoint.exe is left unsigned on
+  purpose: txiki.js appends the app bundle after the PE image and reads it back from
+  the end of the file, and whether an Authenticode signature appended after that
+  keeps the bundle readable is unverified (tinyjs lists signing as open work).
 
     $env:MANAPOINT_SIGN_CMD = 'signtool sign /v /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /sha1 <thumbprint> "{}"'
 
 .PARAMETER SkipBuild
-  Stage whatever is already in target/release instead of rebuilding.
+  Package whatever is already in manapoint\dist instead of rebuilding.
 #>
 [CmdletBinding()]
 param([switch]$SkipBuild)
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$crate = Join-Path $repo 'manapoint-tauri\src-tauri'
-$built = Join-Path $crate 'target\release\manapoint.exe'
-$dist = Join-Path $repo 'dist'
-$staged = Join-Path $dist 'Manapoint.exe'
+$app = Join-Path $repo 'manapoint'
+$built = Join-Path $app 'dist'
+$tinyjs = Join-Path $env:LOCALAPPDATA 'tinyjs\tinyjs.cmd'
+$version = (Get-Content (Join-Path $app 'tinyjs.json') -Raw | ConvertFrom-Json).version
 
 if (-not $SkipBuild) {
-    Write-Host '==> cargo build --release' -ForegroundColor Cyan
-    Push-Location $crate
-    try { cargo build --release; if ($LASTEXITCODE -ne 0) { throw "cargo build failed ($LASTEXITCODE)" } }
-    finally { Pop-Location }
+    if (-not (Test-Path $tinyjs)) { throw "tinyjs not found at $tinyjs (irm https://tinyjs.app/install.ps1 | iex)" }
+    Write-Host '==> node --test' -ForegroundColor Cyan
+    Push-Location $app
+    try {
+        node --test (Get-ChildItem test\*.test.mjs | ForEach-Object FullName)
+        if ($LASTEXITCODE -ne 0) { throw "tests failed ($LASTEXITCODE)" }
+        Write-Host '==> tinyjs build' -ForegroundColor Cyan
+        & $tinyjs build
+        if ($LASTEXITCODE -ne 0) { throw "tinyjs build failed ($LASTEXITCODE)" }
+    } finally { Pop-Location }
 }
-if (-not (Test-Path $built)) { throw "missing $built" }
-
-New-Item -ItemType Directory -Force -Path $dist | Out-Null
-Copy-Item $built $staged -Force
-
-# --- version resource -------------------------------------------------------
-# Defender's ML classifiers treat a binary with no publisher or copyright as a
-# stronger candidate for a generic detection, so fail the release if the
-# resource came out empty.
-$vi = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($staged)
-Write-Host '==> version resource' -ForegroundColor Cyan
-$vi | Format-List CompanyName, ProductName, FileDescription, FileVersion, LegalCopyright | Out-String | Write-Host
-foreach ($field in 'CompanyName', 'ProductName', 'FileDescription', 'LegalCopyright') {
-    if ([string]::IsNullOrWhiteSpace($vi.$field)) {
-        throw "$field is empty - check bundle.publisher / bundle.copyright in tauri.conf.json"
-    }
+foreach ($f in 'Manapoint.exe', 'launcher.exe') {
+    if (-not (Test-Path (Join-Path $built $f))) { throw "missing $built\$f" }
 }
 
 # --- signing ----------------------------------------------------------------
+$launcher = Join-Path $built 'launcher.exe'
 if ($env:MANAPOINT_SIGN_CMD) {
-    Write-Host '==> signing' -ForegroundColor Cyan
-    $cmd = $env:MANAPOINT_SIGN_CMD.Replace('{}', $staged)
-    & pwsh -NoProfile -Command $cmd
+    Write-Host '==> signing launcher.exe' -ForegroundColor Cyan
+    & pwsh -NoProfile -Command $env:MANAPOINT_SIGN_CMD.Replace('{}', $launcher)
     if ($LASTEXITCODE -ne 0) { throw "signing failed ($LASTEXITCODE)" }
 }
-
-$sig = Get-AuthenticodeSignature $staged
+$sig = Get-AuthenticodeSignature $launcher
 if ($sig.Status -eq 'Valid') {
-    Write-Host "==> signed by $($sig.SignerCertificate.Subject)" -ForegroundColor Green
+    Write-Host "==> launcher.exe signed by $($sig.SignerCertificate.Subject)" -ForegroundColor Green
 } else {
     Write-Warning @"
-Manapoint.exe is NOT signed (status: $($sig.Status)).
-Defender and SmartScreen will very likely flag this build. Set
-MANAPOINT_SIGN_CMD (see the comment at the top of this script) before
-publishing, or expect to file a false-positive report at
-https://www.microsoft.com/en-us/wdsi/filesubmission
+launcher.exe is NOT signed (status: $($sig.Status)), and Manapoint.exe never is.
+Defender and SmartScreen will likely flag this build. Expect to file a
+false-positive report at https://www.microsoft.com/en-us/wdsi/filesubmission
 "@
 }
 
-# --- release notes fragment -------------------------------------------------
-$hash = (Get-FileHash $staged -Algorithm SHA256).Hash.ToLower()
-$size = [math]::Round((Get-Item $staged).Length / 1MB, 1)
+# --- zip + release notes fragment ------------------------------------------
+$dist = Join-Path $repo 'dist'
+New-Item -ItemType Directory -Force -Path $dist | Out-Null
+$zip = Join-Path $dist "Manapoint-$version-win.zip"
+$stage = Join-Path $env:TEMP "manapoint-release-$PID\Manapoint"
+New-Item -ItemType Directory -Force -Path $stage | Out-Null
+try {
+    Copy-Item (Join-Path $built 'Manapoint.exe'), $launcher $stage
+    if (Test-Path $zip) { Remove-Item $zip }
+    Compress-Archive -Path $stage -DestinationPath $zip
+} finally { Remove-Item -Recurse -Force (Split-Path $stage) }
+
+$hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+$size = [math]::Round((Get-Item $zip).Length / 1MB, 1)
+$unpacked = [math]::Round(((Get-ChildItem $built -File | Measure-Object Length -Sum).Sum) / 1MB, 1)
 Write-Host ''
-Write-Host "==> $staged  ($size MB)" -ForegroundColor Cyan
+Write-Host "==> $zip  ($size MB zipped, $unpacked MB unpacked)" -ForegroundColor Cyan
 Write-Host "SHA-256: $hash"
 Write-Host ''
 Write-Host 'Paste into the release notes:' -ForegroundColor Cyan
 @"
 
 ``````
-Manapoint.exe  $size MB
+Manapoint-$version-win.zip  $size MB (unzip, run Manapoint.exe)
 SHA-256  $hash
 ``````
 "@ | Write-Host

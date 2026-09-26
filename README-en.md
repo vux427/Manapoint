@@ -7,13 +7,16 @@
 
 Five AI subscriptions, one floating panel.
 
-Manapoint is a Rust + Tauri 2 desktop widget that keeps opencode Go, Claude Code, Codex, Grok and Antigravity
-usage windows (5-hour / weekly / monthly) on screen. Right-click to refresh, open settings, or quit.
+Manapoint is a desktop widget built with [tinyjs](https://tinyjs.app) — JavaScript on both
+sides — that keeps opencode Go, Claude Code, Codex, Grok and Antigravity usage windows
+(5-hour / weekly / monthly) on screen. Right-click to refresh, open settings, or quit.
 
 ## Download
 
-Grab `Manapoint.exe` from [Releases](https://github.com/vux427/Manapoint/releases), put it
-anywhere, double-click it. No installer, no admin rights, no .NET or Node to install first.
+Grab `Manapoint-<version>-win.zip` from [Releases](https://github.com/vux427/Manapoint/releases),
+unzip it anywhere, and double-click `Manapoint.exe`. No installer, no admin rights, no .NET or
+Node to install first. The `launcher.exe` beside it is the half that owns the window, so keep
+the two files together.
 
 Windows 11 already ships the WebView2 runtime it needs; on Windows 10 without it, the first
 run offers to install it.
@@ -22,18 +25,18 @@ Clone the repo only if you want to change something — see Build and test below
 
 ### If your antivirus blocks it
 
-`Manapoint.exe` does not carry a paid code signing certificate yet. Windows Defender and
+Manapoint does not carry a paid code signing certificate yet. Windows Defender and
 SmartScreen warn about unsigned executables that few people have downloaded, and sometimes
 call them outright malware — that is a false positive. To check the file you have was not
 tampered with, compare it against the SHA-256 listed on the Releases page:
 
 ```powershell
-Get-FileHash .\Manapoint.exe -Algorithm SHA256
+Get-FileHash .\Manapoint-0.3.0-win.zip -Algorithm SHA256
 ```
 
 Manapoint only reads the sign-in state each vendor's CLI already stores on your machine and
 calls the vendors' official APIs. The whole collection path lives in
-`src-tauri/src/providers/` and the source is all in this repo. If it stays blocked, you can
+`manapoint/src/providers/` and the source is all in this repo. If it stays blocked, you can
 report the file at [Microsoft's false positive form](https://www.microsoft.com/en-us/wdsi/filesubmission);
 it is usually cleared within a few days.
 
@@ -73,58 +76,67 @@ The other themes give each provider its own column, header on top:
 - Drag to reorder providers in the settings window, with an insertion line
 - Live edge and corner snapping while you drag — it grips when you get close and lets go
   the moment you pull away, so it never fights your hand
+- Every route, one answer: each provider tries every login it can find (its own CLI,
+  logins opencode holds — console login included — and multi-account plugins); any
+  route with data wins, and it only errors when all fail. Distinct accounts get one
+  group of bars each
 - Failures explain themselves and keep the last known numbers instead of going blank
 - Minimise to the tray from the context menu; optional start-at-login
 
 ## Build and test
 
-```sh
-# Rust side: collectors, window, snapping
-cd manapoint-tauri/src-tauri
-cargo test
-cargo run                 # dev run
-cargo build --release     # size-optimised binary
+Install tinyjs 0.42+ (`irm https://tinyjs.app/install.ps1 | iex`) and Node 18+ (Node only
+runs the tests; the app has zero npm dependencies).
 
-# Frontend side: theme contrast and presentation rules
-cd ../..
-node --test manapoint-tauri/ui/*.test.mjs
+```sh
+cd manapoint
+node --test test/*.test.mjs   # parsers, token rules, snapping geometry, theme contrast
+tinyjs dev                    # dev run; frontend edits apply live
+tinyjs build                  # dist/Manapoint.exe + dist/launcher.exe
 ```
 
-The release binary is about 4.7 MB (LTO, opt-level=z, stripped); rendering goes through the
-system WebView2, so no runtime is bundled.
+A release is about 6.7 MB in total (5.8 MB txiki.js runtime + 0.9 MB WebView2 launcher);
+rendering goes through the system WebView2.
+
+When a card shows an error, the diagnostics script says why. It prints only whether files
+exist, field names, expiry times and error messages — never a token — so its output is safe
+to paste into an issue:
+
+```powershell
+cd manapoint
+& "$env:LOCALAPPDATA\tinyjs\bin\tjs.exe" run diagnose.js
+```
 
 ### Releasing
 
-`scripts/release.ps1` builds, signs (when a certificate is configured), stages the
-executable at `dist/Manapoint.exe` and prints the SHA-256 for the release notes. It fails
-outright if the version resource lost its publisher or copyright string, and warns when the
-binary is unsigned — an unsigned executable is almost certain to be flagged by Defender, so
-it never passes quietly.
+`scripts/release.ps1` runs the tests, builds, signs `launcher.exe` (when a certificate is
+configured), zips both executables into `dist/Manapoint-<version>-win.zip` and prints the
+SHA-256 for the release notes. It warns when the build is unsigned — an unsigned executable
+is almost certain to be flagged by Defender, so it never passes quietly.
 
 ```powershell
 # Example: Azure Trusted Signing. {} is replaced with the file to sign.
 $env:MANAPOINT_SIGN_CMD = 'signtool sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib "C:\ats\Azure.CodeSigning.Dlib.dll" /dmdf "C:\ats\metadata.json" "{}"'
-pwsh -File scripts
-elease.ps1
+pwsh -File scripts\release.ps1
 ```
-
-Requires Rust 1.82+ and Node 18+ (Node only runs the tests; the UI itself has zero npm
-dependencies). On Windows you also need the WebView2 runtime, which ships with Windows 11.
 
 ## Layout
 
 ```
-manapoint-tauri/
-  CONTRACT.md          frontend/backend contract: commands, events, DOM, layout rules
-  ui/                  plain HTML/CSS/ES modules, no build step
-  src-tauri/src/
-    providers/         the collectors and parsers, pure functions where it counts
-    snap.rs            edge-snapping geometry
-    win.rs             Win32: work area, live snapping during a drag
-    lib.rs             window, tray, commands, polling
+manapoint/
+  tinyjs.json          window chrome (frameless, transparent, tray-style) and version
+  CONTRACT.md          frontend/backend contract: API, events, DOM, layout rules
+  diagnose.js          diagnostics (never prints a secret)
+  src/
+    main.js            backend entry: API, settings, snapshot, five-minute polling
+    providers/         collectors, parsers and token refresh, pure where it counts
+    lib/               shared: error kinds, file/network IO, Windows Credential Manager (FFI)
+    frontend/          panel and settings pages; panel.js also owns window geometry,
+                       drag snapping, the tray and the context menu
+  test/                node --test suites
 ```
 
 ## Docs
 
 - [Provider reference](docs/providers.md): endpoints, credential paths, window definitions
-- [Frontend/backend contract](manapoint-tauri/CONTRACT.md): types, commands, layout rules
+- [Frontend/backend contract](manapoint/CONTRACT.md): types, API, layout rules
