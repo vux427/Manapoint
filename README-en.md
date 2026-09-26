@@ -81,7 +81,16 @@ The other themes give each provider its own column, header on top:
   route with data wins, and it only errors when all fail. Distinct accounts get one
   group of bars each
 - Failures explain themselves and keep the last known numbers instead of going blank
-- Minimise to the tray from the context menu; optional start-at-login
+- Usage alerts: a system notification when any window crosses 80% or 95%, or resets
+  after being high (can be turned off in settings)
+- Burn-rate projection: from the last day's samples, a faint extension of the bar shows
+  where the window will be at its reset; if this pace empties it first, the countdown
+  turns red and shows "≈time left"
+- Minimise to the tray from the context menu; the tray icon turns amber or red with the
+  tightest window, and its tooltip lists every provider
+- Auto-update: checks GitHub for a new release daily; the context menu then offers
+  "更新到 x.y.z", which downloads, verifies and restarts
+- Optional start-at-login
 
 ## Build and test
 
@@ -111,7 +120,8 @@ cd manapoint
 
 `scripts/release.ps1` runs the tests, builds, signs `launcher.exe` (when a certificate is
 configured), zips both executables into `dist/Manapoint-<version>-win.zip` and prints the
-SHA-256 for the release notes. It warns when the build is unsigned — an unsigned executable
+SHA-256 for the release notes. It also writes `dist/manifest.json`, the file auto-update
+reads — upload it to the release together with the zip. It warns when the build is unsigned — an unsigned executable
 is almost certain to be flagged by Defender, so it never passes quietly.
 
 ```powershell

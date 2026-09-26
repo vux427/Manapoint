@@ -13,8 +13,11 @@ import {
   litCells,
   percentText,
   resetsInText,
+  runOutText,
   shortLabel,
   statusColor,
+  trayLevel,
+  trayTooltip,
 } from "./format.js";
 
 const call = (method, params) => tiny.api.call(method, params);
@@ -35,6 +38,8 @@ let theme = THEMES[0];
 let settings = null;
 let cards = [];
 let lastSize = { width: 0, height: 0 };
+/** { current, latest, notes } when a newer release is available. */
+let update = null;
 
 // ── rendering ────────────────────────────────────────────────────────────────
 
@@ -82,14 +87,21 @@ function meterNode(window_, now) {
     if (theme.brackets) cells.appendChild(el("span", "meter__bracket", "["));
 
     const lit = litCells(window_.percent, theme.segmentCells);
+    const ahead = window_.projected ? litCells(Math.min(100, window_.projected), theme.segmentCells) : lit;
     for (let i = 0; i < theme.segmentCells; i++) {
-      cells.appendChild(el("i", i < lit ? "cell is-lit" : "cell"));
+      cells.appendChild(el("i", i < lit ? "cell is-lit" : i < ahead ? "cell is-projected" : "cell"));
     }
 
     if (theme.brackets) cells.appendChild(el("span", "meter__bracket", "]"));
     item.appendChild(cells);
   } else {
     const track = el("div", "meter__track");
+    // The ghost shows where this pace leaves the window at its reset.
+    if (window_.projected) {
+      const ghost = el("div", "meter__ghost");
+      ghost.style.width = `${Math.min(100, window_.projected)}%`;
+      track.appendChild(ghost);
+    }
     const fill = el("div", "meter__fill");
     fill.style.width = `${Math.max(0, Math.min(100, window_.percent))}%`;
     track.appendChild(fill);
@@ -102,7 +114,11 @@ function meterNode(window_, now) {
   value.appendChild(document.createTextNode(percentText(window_.percent)));
   item.appendChild(value);
 
-  item.appendChild(el("span", "meter__reset", resetsInText(window_.resetsAt, now)));
+  // A window this pace empties early counts down to that instead of the reset.
+  const runOut = runOutText(window_, now);
+  const reset = el("span", runOut ? "meter__reset is-runout" : "meter__reset", runOut ? runOut.short : resetsInText(window_.resetsAt, now));
+  if (runOut) item.title = runOut.title;
+  item.appendChild(reset);
   return item;
 }
 
@@ -171,6 +187,11 @@ function compactCard(card, group, first) {
     // aligned across providers when one of them reports fewer windows.
     if (window_) {
       slot.style.setProperty("--meter-fill", statusColor(theme, window_.percent));
+      const runOut = runOutText(window_);
+      if (runOut) {
+        slot.classList.add("is-runout");
+        slot.title = runOut.title;
+      }
       slot.appendChild(el("i", null, shortLabel(kind)));
       slot.appendChild(el("b", null, percentText(window_.percent)));
     }
@@ -203,6 +224,7 @@ function render() {
   panel.style.setProperty("--text-muted", theme.textMuted);
   panel.style.setProperty("--track", theme.track);
   panel.style.setProperty("--border", theme.border);
+  panel.style.setProperty("--critical", theme.status.critical);
   panel.style.setProperty("--segment-radius", `${theme.segmentRadius}px`);
   panel.style.setProperty("--segment-width", `${theme.segmentWidth}px`);
   panel.style.setProperty("--panel-width", `${theme.panelWidth}px`);
@@ -347,7 +369,11 @@ function wireDrag() {
 // Native menus rather than HTML ones: the panel is only a couple of hundred pixels
 // tall, so an in-page menu would be clipped by the window bounds.
 
-const PANEL_MENU = [
+/** An update, once known, heads both menus: it is the one thing worth acting on. */
+const updateItems = () => (update ? [{ id: "update", label: `更新到 ${update.latest}` }, { separator: true }] : []);
+
+const panelMenu = () => [
+  ...updateItems(),
   { id: "refresh", label: "重新整理" },
   { separator: true },
   { id: "minimize", label: "最小化" },
@@ -356,26 +382,42 @@ const PANEL_MENU = [
   { id: "quit", label: "結束" },
 ];
 
-const TRAY_MENU = [
+const trayMenu = () => [
+  ...updateItems(),
   { id: "show", label: "顯示面板" },
   { id: "settings", label: "設定…" },
   { separator: true },
   { id: "quit", label: "結束" },
 ];
 
+const TRAY_ICONS = { good: "tray.png", warning: "tray-warning.png", critical: "tray-critical.png" };
+
 /** tray.set wants a real file path; the page knows where its own files live. */
-function trayIconPath() {
-  const path = decodeURIComponent(new URL("./tray.png", location.href).pathname);
+function trayIconPath(level) {
+  const name = TRAY_ICONS[level] ?? TRAY_ICONS.good;
+  const path = decodeURIComponent(new URL(`./${name}`, location.href).pathname);
   return path.replace(/^\/([A-Za-z]:)/, "$1");
 }
 
 let minimized = false;
 
+/** The tray icon exists only while minimised; its colour and tooltip follow the cards. */
+function syncTray() {
+  if (!minimized) return;
+  tiny.tray.set({
+    icon: trayIconPath(trayLevel(cards)),
+    template: false,
+    tooltip: trayTooltip(cards),
+    menu: trayMenu(),
+    primaryAction: true,
+  });
+}
+
 /** Show both ways home only while hidden: a permanent tray icon plus a taskbar button
  * would occupy two slots for a widget that normally sits on the desktop. */
 function minimizePanel() {
   minimized = true;
-  tiny.tray.set({ icon: trayIconPath(), tooltip: "Manapoint", menu: TRAY_MENU, primaryAction: true });
+  syncTray();
   tiny.app.presence("normal");
   tiny.win.minimize();
 }
@@ -417,11 +459,36 @@ async function handleMenu(id) {
     case "quit":
       tiny.quit();
       break;
+    case "update":
+      await installUpdate();
+      break;
   }
 }
 
+let installing = false;
+
+/** On success the app relaunches as the new version; this page never hears back. */
+async function installUpdate() {
+  if (installing) return;
+  installing = true;
+  try {
+    await call("install_update");
+  } catch (err) {
+    tiny.notify("Manapoint 更新失敗", String(err && err.message ? err.message : err));
+    reportFailure(err);
+  } finally {
+    installing = false;
+  }
+}
+
+function setUpdate(next) {
+  update = next;
+  tiny.menu.setContext(panelMenu());
+  syncTray();
+}
+
 function wireMenus() {
-  tiny.menu.setContext(PANEL_MENU);
+  tiny.menu.setContext(panelMenu());
   tiny.menu.onContext((id) => handleMenu(id).catch(reportFailure));
   tiny.tray.on((id) => handleMenu(id).catch(reportFailure));
   tiny.tray.onClick(showPanel);
@@ -437,6 +504,7 @@ async function start() {
   settings = state.settings;
   theme = themeByName(settings.themeName);
   cards = await call("get_cards");
+  update = state.update ?? null;
 
   tiny.win.setAlwaysOnTop(true);
   tiny.win.setResizable(false);
@@ -447,7 +515,9 @@ async function start() {
   tiny.api.on("cards", (next) => {
     cards = next;
     render();
+    syncTray();
   });
+  tiny.api.on("update", setUpdate);
   tiny.api.on("settings", (next) => {
     settings = next;
     theme = themeByName(settings.themeName);

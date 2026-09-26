@@ -3,11 +3,12 @@
   "title": "Manapoint",
   "size": "252x240",
   "id": "com.worknite.manapoint",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "minTinyjsVersion": "0.42.0",
   "icon": "icon.png",
   "activation": "accessory",
   "contextMenu": false,
   "offscreenRescue": true,
-  "chrome": { "frame": false, "transparent": true, "windowControls": false }
+  "chrome": { "frame": false, "transparent": true, "windowControls": false },
+  "update": { "url": "https://github.com/vux427/Manapoint/releases/latest/download/manifest.json", "auto": "daily" }
 }

@@ -99,3 +99,36 @@ export function resetsInText(resetsAt, now = new Date()) {
   }
   return `${Math.floor(deltaMs / DAY_MS)}d`;
 }
+
+// The tray icon while the panel is minimised: the most-used window decides its colour,
+// on the same thresholds as the meters, whatever the theme's own colouring.
+export function trayLevel(cards) {
+  let worst = -1;
+  for (const card of cards) for (const w of card.windows) worst = Math.max(worst, w.percent);
+  if (worst < 0) return null;
+  return worst >= CRITICAL_AT ? "critical" : worst >= WARNING_AT ? "warning" : "good";
+}
+
+// Windows cuts tray tooltips at 127 characters; one line per provider, highest window.
+export function trayTooltip(cards) {
+  const lines = [];
+  for (const card of cards) {
+    if (card.windows.length === 0) continue;
+    const top = Math.max(...card.windows.map((w) => w.percent));
+    lines.push(`${card.name} ${percentText(top)}`);
+  }
+  const text = lines.length ? lines.join("\n") : "Manapoint";
+  return text.length > 127 ? text.slice(0, 126) + "…" : text;
+}
+
+// The meter's projection hint: "≈2h" when this pace empties the window before it
+// resets, with the full sentence for the tooltip. Nothing when there is no projection.
+export function runOutText(window_, now = new Date()) {
+  if (!window_.runsOutAt) return null;
+  const inText = resetsInText(window_.runsOutAt, now);
+  const resetText = resetsInText(window_.resetsAt, now);
+  return {
+    short: `≈${inText}`,
+    title: `照目前速度約 ${inText} 後用完（${resetText} 後重置）`,
+  };
+}

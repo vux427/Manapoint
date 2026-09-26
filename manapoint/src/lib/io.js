@@ -35,6 +35,11 @@ export async function writeText(path, text) {
   await rt().writeFile(path, enc.encode(text));
 }
 
+/** Delete a file if it is there; a missing one is already the goal. */
+export async function removeFile(path) {
+  await rt().remove(path).catch(() => {});
+}
+
 /**
  * Atomic write: a temp file beside the target, then a rename over it, so a crash
  * mid-write cannot corrupt someone's credential file. Returns false on failure — the

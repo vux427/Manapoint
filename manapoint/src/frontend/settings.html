@@ -43,6 +43,20 @@
       <label><input type="checkbox" id="autostart" />開機時自動啟動 Manapoint</label>
       <p id="autostart-error" class="error" hidden></p>
     </section>
+
+    <section id="section-alerts" aria-labelledby="heading-alerts">
+      <h2 id="heading-alerts">用量提醒</h2>
+      <label><input type="checkbox" id="alerts" />用量超過 80%、95% 或重置時通知我</label>
+    </section>
+
+    <section id="section-version" aria-labelledby="heading-version">
+      <h2 id="heading-version">版本</h2>
+      <div class="version-row">
+        <span id="version-text" class="hint"></span>
+        <button type="button" id="update-check">檢查更新</button>
+        <button type="button" id="update-install" hidden></button>
+      </div>
+    </section>
   </main>
   <script type="module" src="./settings.js"></script>
 </body>

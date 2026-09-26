@@ -17,11 +17,21 @@
 
     $env:MANAPOINT_SIGN_CMD = 'signtool sign /v /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /sha1 <thumbprint> "{}"'
 
+  It also writes dist\manifest.json, the file the app's auto-update reads (tinyjs.json
+  "update".url points at releases/latest/download/manifest.json). Upload it to the
+  release together with the zip, or installed copies will not see the new version.
+
 .PARAMETER SkipBuild
   Package whatever is already in manapoint\dist instead of rebuilding.
+
+.PARAMETER NotesFile
+  Optional text shown with the update; stored as the manifest's "notes".
+
+.PARAMETER GitHubRepo
+  GitHub owner/name the release is published under.
 #>
 [CmdletBinding()]
-param([switch]$SkipBuild)
+param([switch]$SkipBuild, [string]$NotesFile, [string]$GitHubRepo = 'vux427/Manapoint')
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
@@ -77,11 +87,27 @@ try {
 } finally { Remove-Item -Recurse -Force (Split-Path $stage) }
 
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+
+# --- update manifest ----------------------------------------------------------
+# tinyjs reads the Windows build from the "win" block; the url is the versioned
+# asset, so a manifest never points at a zip other than the one it hashes.
+$manifest = [ordered]@{
+    version = $version
+    win     = [ordered]@{
+        url    = "https://github.com/$GitHubRepo/releases/download/v$version/Manapoint-$version-win.zip"
+        sha256 = $hash
+    }
+}
+if ($NotesFile) { $manifest.notes = (Get-Content $NotesFile -Raw -Encoding UTF8).Trim() }
+$manifestPath = Join-Path $dist 'manifest.json'
+# No BOM: the app parses this with JSON.parse.
+[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 4), (New-Object Text.UTF8Encoding $false))
 $size = [math]::Round((Get-Item $zip).Length / 1MB, 1)
 $unpacked = [math]::Round(((Get-ChildItem $built -File | Measure-Object Length -Sum).Sum) / 1MB, 1)
 Write-Host ''
 Write-Host "==> $zip  ($size MB zipped, $unpacked MB unpacked)" -ForegroundColor Cyan
 Write-Host "SHA-256: $hash"
+Write-Host "==> $manifestPath (upload it with the zip)" -ForegroundColor Cyan
 Write-Host ''
 Write-Host 'Paste into the release notes:' -ForegroundColor Cyan
 @"

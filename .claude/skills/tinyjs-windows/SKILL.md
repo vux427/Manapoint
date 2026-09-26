@@ -129,6 +129,51 @@ edge. Escaping then always costs exactly one threshold.
   `tiny.menu.onContext(id => …)` in the one page that owns the actions.
 - `"contextMenu": false` in tinyjs.json suppresses the default menu.
 - Native menus beat HTML ones in a small widget: nothing gets clipped.
+- Menus are data: rebuild and re-`setContext` (or re-`tray.set`) when state
+  changes, e.g. to add an "update to x.y.z" item at the top.
+
+## Tray and notifications
+
+- `tiny.tray.set(spec)` replaces the whole icon each call; call it again to
+  change icon or tooltip. `icon` must be a real file path (derive it from
+  `location.href` in the page); pass `template: false` to keep colours.
+  Windows cuts tooltips at 127 chars.
+- New tray icons land in the overflow (^) on Windows 11, and
+  `HKCU\Control Panel\NotifyIconSettings\*\IconSnapshot` is only the first
+  icon registered — neither proves an icon change. Verify with a temporary
+  `tiny.log(...)` under `tinyjs dev`: page logs print in the dev terminal
+  tagged `[web]`.
+- `app.notify({ title, body })` / `tiny.notify(title, body)` shows a real
+  toast in every mode, no tray icon needed. Proof without looking at the
+  screen: copy `%LOCALAPPDATA%\Microsoft\Windows\Notifications\wpndatabase.db`
+  (+ `-wal`) and query `Notification` rows whose Payload mentions the app
+  (`ArrivalTime` is a FILETIME; cast to TEXT or node:sqlite overflows).
+- Backend persistence for small flags: `app.store.get/set` (per app id).
+
+## Auto-update (tinyjs.json `"update"`)
+
+- `"update": { "url": ".../manifest.json", "auto": "daily" }` checks 5 s after
+  launch and every 24 h (built apps only) and calls the backend export
+  `onUpdateAvailable(info, app)` plus the page event `update-available`.
+  `app.update.check()` / `app.update.install()` for manual flows.
+- Windows reads ONLY the manifest's `win: { url, sha256 }` block; without it
+  a release reads as "no update". A GitHub-hosted manifest works at the
+  stable URL `https://github.com/<o>/<r>/releases/latest/download/manifest.json`;
+  put the versioned asset URL inside. Write it without a BOM.
+- The zip must hold one top-level folder with the exe + launcher.exe
+  (`Compress-Archive -Path <dir>` does). Install swaps files in place; the
+  running exes become `*.update-old`, swept on the next update.
+- **Relaunch bug (0.42):** install spawns the new exe while the old instance
+  is alive; single-instance activation makes the newcomer exit, then the old
+  one quits → nothing running. Children of the app die with it, too. Fix
+  (manapoint/src/lib/relaunch.js): before `install()`, create a helper through
+  WMI (`Invoke-CimMethod Win32_Process Create`, `ShowWindow=0`, script via
+  `-EncodedCommand`) that `Wait-Process`es the old pid and starts the exe only
+  if a flag file still exists; remove the flag if install throws.
+- Test end to end locally: http is allowed for `127.0.0.1`. Build a copy with
+  the url pointed at a local server, build a higher version into a zip, serve
+  both, launch the copy, drive the menu with SendInput, and check the files
+  were swapped and a new process started.
 
 ## Backend networking (txiki `fetch`)
 

@@ -63,6 +63,8 @@ function renderAll() {
   renderOpacity();
   renderProviders();
   renderAutoStart();
+  renderAlerts();
+  renderVersion();
 }
 
 function buildThemePreview(theme) {
@@ -391,6 +393,55 @@ async function onAutoStartChange(event) {
   }
 }
 
+function renderAlerts() {
+  byId("alerts").checked = appState.settings.alerts !== false;
+}
+
+async function onAlertsChange(event) {
+  try {
+    appState.settings = await invoke("set_alerts", { enabled: event.target.checked });
+  } catch (err) {
+    showError(messageOf(err));
+  }
+  renderAlerts();
+}
+
+function renderVersion() {
+  const update = appState.update;
+  byId("version-text").textContent = appState.version ? `目前 ${appState.version}` : "";
+  const install = byId("update-install");
+  install.hidden = !update;
+  if (update) install.textContent = `更新到 ${update.latest}`;
+}
+
+async function onUpdateCheck(event) {
+  const button = event.target;
+  button.disabled = true;
+  try {
+    const result = await invoke("check_update");
+    appState.update = result.available ? result : null;
+    renderVersion();
+    if (!result.available) byId("version-text").textContent = `目前 ${appState.version}，已是最新版`;
+  } catch (err) {
+    showError("檢查更新失敗：" + messageOf(err));
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function onUpdateInstall(event) {
+  event.target.disabled = true;
+  event.target.textContent = "下載中…";
+  try {
+    // On success the app quits and relaunches as the new version.
+    await invoke("install_update");
+  } catch (err) {
+    showError("更新失敗：" + messageOf(err));
+    event.target.disabled = false;
+    renderVersion();
+  }
+}
+
 function applyRemoteSettings(next) {
   appState.settings = next;
   if (Array.isArray(next.providerOrder)) {
@@ -414,6 +465,9 @@ function bindControls() {
   byId("opacity").addEventListener("input", onOpacityInput);
   byId("opacity").addEventListener("change", onOpacityChange);
   byId("autostart").addEventListener("change", onAutoStartChange);
+  byId("alerts").addEventListener("change", onAlertsChange);
+  byId("update-check").addEventListener("click", onUpdateCheck);
+  byId("update-install").addEventListener("click", onUpdateInstall);
 }
 
 async function start() {
@@ -440,6 +494,10 @@ async function start() {
   bindControls();
   renderAll();
   tiny.api.on("settings", applyRemoteSettings);
+  tiny.api.on("update", (info) => {
+    appState.update = info;
+    renderVersion();
+  });
 }
 
 // Startup stays out of the module top level so Node (no DOM, no tinyjs) can

@@ -17,6 +17,7 @@ export function defaults() {
     panelOpacity: 0.85,
     enabledProviders: null, // null = never configured, so everything shows
     providerOrder: null, // null = registry order
+    alerts: true, // notify when a window crosses 80% / 95%, or resets after being high
   };
 }
 
@@ -38,6 +39,7 @@ export function normalize(raw) {
       : d.panelOpacity,
     enabledProviders: idList(raw.enabledProviders),
     providerOrder: idList(raw.providerOrder),
+    alerts: typeof raw.alerts === "boolean" ? raw.alerts : d.alerts,
   };
 }
 

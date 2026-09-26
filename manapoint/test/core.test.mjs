@@ -22,7 +22,8 @@ describe("settings", () => {
     const s = normalize({ themeName: "魔力", cardsLayout: "Horizontal", panelOpacity: 0.7,
       enabledProviders: ["codex"], providerOrder: ["codex", "grok"] });
     assert.deepEqual(s, { themeName: "魔力", cardsLayout: "Horizontal", panelOpacity: 0.7,
-      enabledProviders: ["codex"], providerOrder: ["codex", "grok"] });
+      enabledProviders: ["codex"], providerOrder: ["codex", "grok"], alerts: true });
+    assert.equal(normalize({ alerts: false }).alerts, false);
   });
 });
 

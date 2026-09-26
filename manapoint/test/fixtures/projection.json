@@ -1,0 +1,15 @@
+[
+  { "id": "claude-code", "name": "Claude Code",
+    "badge": { "icon": "Claude", "text": null, "background": "#D97757", "foreground": "#FFFFFF" },
+    "windows": [
+      { "kind": "Rolling", "percent": 46, "resetsAt": "2026-10-30T03:00:00Z", "projected": 72 },
+      { "kind": "Weekly", "percent": 71, "resetsAt": "2026-11-02T00:00:00Z", "projected": 140, "runsOutAt": "2026-10-30T02:30:00Z" }
+    ],
+    "note": null, "error": null },
+  { "id": "codex", "name": "Codex",
+    "badge": { "icon": "OpenAI", "text": null, "background": "#10A37F", "foreground": "#FFFFFF" },
+    "windows": [
+      { "kind": "Weekly", "percent": 22, "resetsAt": "2026-11-01T00:00:00Z" }
+    ],
+    "note": null, "error": null }
+]

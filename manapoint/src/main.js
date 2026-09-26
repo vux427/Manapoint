@@ -4,10 +4,13 @@
 // Window geometry, the tray and menus live in the panel page itself (tiny.win,
 // tiny.tray, tiny.menu), so this side never has to know where the panel is.
 
+import { alertsFor, notification } from "./lib/alerts.js";
 import * as cache from "./lib/cache.js";
 import * as cards from "./lib/cards.js";
 import { env, readText, setSpawner } from "./lib/io.js";
+import * as relaunch from "./lib/relaunch.js";
 import * as settingsFile from "./lib/settings.js";
+import * as trend from "./lib/trend.js";
 import * as registry from "./providers/registry.js";
 
 /** Matches the token refresh skew, so a token that expires between polls is renewed
@@ -24,6 +27,10 @@ const state = {
   round: null,
   /** Cards from MANAPOINT_FIXTURE, if set; see loadFixture. */
   fixture: null,
+  /** Recent percent samples per window, for the burn-rate projection. */
+  history: {},
+  /** { current, latest, notes } once a newer release is known, else null. */
+  update: null,
 };
 
 /** Settings and the snapshot load as soon as the module does; every handler waits
@@ -31,6 +38,7 @@ const state = {
 const ready = (async () => {
   state.settings = await settingsFile.load();
   state.lastGood = await cache.load();
+  state.history = await trend.load();
   state.cards = cards.seed(registry.enabled(state.settings), state.lastGood);
   state.fixture = await loadFixture();
   if (state.fixture) state.cards = state.fixture;
@@ -48,8 +56,11 @@ async function loadFixture() {
   return JSON.parse(text);
 }
 
+/** Cards as the page sees them: the stored ones plus the burn-rate projection. */
+const view = () => trend.annotate(state.cards, state.history, Date.now());
+
 function pushCards() {
-  state.app?.push("cards", state.cards);
+  state.app?.push("cards", view());
 }
 
 async function collectAll() {
@@ -58,9 +69,28 @@ async function collectAll() {
   // Fire all providers at once; each is independent, and sequential round trips
   // would make a cold start visibly slower.
   const outcomes = await Promise.allSettled(providers.map((p) => p.collect()));
+  // fromOutcomes replaces snapshot entries rather than editing them, so a shallow copy
+  // keeps the previous readings to compare against.
+  const before = { ...state.lastGood };
   state.cards = cards.fromOutcomes(providers, outcomes, state.lastGood);
-  await cache.save(state.lastGood);
+  noteFreshReadings(providers, outcomes, before);
+  await Promise.all([cache.save(state.lastGood), trend.save(state.history)]);
   return state.cards;
+}
+
+/** Feed fresh numbers (not cached ones) to the trend history and the alerts. */
+function noteFreshReadings(providers, outcomes, before) {
+  const now = Date.now();
+  const lines = [];
+  providers.forEach((p, i) => {
+    const o = outcomes[i];
+    if (o.status !== "fulfilled" || o.value.windows.length === 0) return;
+    for (const w of o.value.windows) trend.record(state.history, trend.windowKey(p.id, w), now, w.percent);
+    lines.push(...alertsFor(p.name, before[p.id]?.windows, o.value.windows));
+  });
+  trend.prune(state.history, now);
+  const note = state.settings.alerts ? notification(lines) : null;
+  if (note) state.app?.notify(note);
 }
 
 function refresh() {
@@ -110,11 +140,36 @@ const handlers = {
       providers: registry.inOrder(state.settings.providerOrder).map(registry.descriptor),
       autoStart: login.enabled,
       autoStartSupported: login.supported,
+      version: state.app?.info?.version ?? null,
+      update: state.update,
     };
   },
 
-  get_cards: () => state.cards,
-  refresh: () => refresh(),
+  get_cards: () => view(),
+  refresh: () => refresh().then(view),
+
+  get_update: () => state.update,
+  /** A manual check from the settings page; a hit is announced like the daily one. */
+  async check_update() {
+    const r = await state.app.update.check();
+    if (!r.available) return { available: false, current: r.current, latest: r.latest };
+    const info = { current: r.current, latest: r.latest, notes: r.notes ?? null };
+    state.update = info;
+    state.app.push("update", info);
+    return { available: true, ...info };
+  },
+  /** Downloads, verifies the sha256, swaps the files in place and relaunches. */
+  async install_update() {
+    await relaunch.arm((argv, opts) => state.app.spawnHidden(argv, opts));
+    try {
+      await state.app.update.install();
+    } catch (err) {
+      await relaunch.disarm();
+      throw err;
+    }
+    return true;
+  },
+  set_alerts: ({ enabled }) => updateSettings((s) => (s.alerts = Boolean(enabled))),
 
   set_theme: ({ name }) => updateSettings((s) => (s.themeName = String(name))),
   set_opacity: ({ value }) => updateSettings((s) => (s.panelOpacity = Number(value))),
@@ -161,6 +216,21 @@ export const api = Object.fromEntries(
     },
   ]),
 );
+
+/**
+ * tinyjs.json "update": { "auto": "daily" } checks the release manifest at launch and
+ * every day after. The menus offer the install; a notification says so once per version.
+ */
+export async function onUpdateAvailable(info, app) {
+  state.update = info;
+  app.push("update", info);
+  const KEY = "notifiedUpdate";
+  try {
+    if ((await app.store.get(KEY)) === info.latest) return;
+    await app.store.set(KEY, info.latest);
+  } catch {}
+  app.notify({ title: `Manapoint ${info.latest} 可更新`, body: "在面板上按右鍵，選「更新到 " + info.latest + "」。" });
+}
 
 export async function init(app) {
   state.app = app;

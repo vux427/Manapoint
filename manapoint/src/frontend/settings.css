@@ -247,3 +247,29 @@ label {
 .drop-line.is-active {
   height: 2px;
 }
+
+button {
+  font: inherit;
+  font-size: 12px;
+  color: #e4e9f0;
+  background: #232730;
+  border: 1px solid #343a46;
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #2c313c;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

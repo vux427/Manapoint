@@ -56,6 +56,13 @@ opencode's stored logins, multi-account plugins; see docs/providers.md) turned u
 **more than one distinct account** with data. Windows of one account are contiguous
 and in priority order. A single-account card never carries it.
 
+Optional `projected: 130` and `runsOutAt: "2026-09-12T03:00:00Z" | null` — the
+burn-rate projection (src/lib/trend.js), added by the backend to what it sends the
+page, never stored in the snapshot. `projected` is the rounded percent the window
+reaches at `resetsAt` on the pace of the last day's samples (at least 30 minutes of
+them); `runsOutAt` is when it hits 100%, present only when that comes before the
+reset. Both are absent when there is no rising trend or no `resetsAt`.
+
 ### 1.3 ProviderDescriptor
 
 ```js
@@ -99,7 +106,8 @@ never both non-null.
   cardsLayout: "Vertical" | "Horizontal",
   panelOpacity: 0.85,        // 0.30-1.0
   enabledProviders: ["opencode-go", ...] | null,   // null = all enabled
-  providerOrder: ["opencode-go", ...] | null
+  providerOrder: ["opencode-go", ...] | null,
+  alerts: true               // notify on crossing 80% / 95%, or a reset after being high
 }
 ```
 
@@ -119,7 +127,7 @@ const off = tiny.api.on("cards", (cards) => { /* payload is the argument itself 
 
 | Method | Params | Returns |
 |---|---|---|
-| `get_state` | — | `{ settings: AppSettings, providers: ProviderDescriptor[], autoStart: bool, autoStartSupported: bool }` |
+| `get_state` | — | `{ settings: AppSettings, providers: ProviderDescriptor[], autoStart: bool, autoStartSupported: bool, version: string, update: UpdateInfo | null }` |
 | `get_cards` | — | `CardState[]` (already ordered and filtered by user prefs) |
 | `refresh` | — | `CardState[]` |
 | `set_theme` | `{ name }` | `AppSettings` |
@@ -128,6 +136,14 @@ const off = tiny.api.on("cards", (cards) => { /* payload is the argument itself 
 | `set_provider_enabled` | `{ id, enabled }` | `AppSettings` |
 | `set_provider_order` | `{ ids }` | `AppSettings` |
 | `set_auto_start` | `{ enabled }` | `{ enabled: bool, error: string | null }` |
+| `set_alerts` | `{ enabled }` | `AppSettings` |
+| `get_update` | — | `UpdateInfo | null` |
+| `check_update` | — | `{ available: bool, current, latest, notes? }` |
+| `install_update` | — | `true`; the app then quits and relaunches as the new version |
+
+`UpdateInfo` is `{ current, latest, notes }` (versions without a leading "v"). tinyjs.json
+`"update": { "url", "auto": "daily" }` checks the release manifest at launch and daily;
+`scripts/release.ps1` writes that manifest.
 
 `providers` in `get_state` is already in the user's chosen order and includes
 unchecked ones (the settings list needs all of them). `autoStartSupported` is false
@@ -144,6 +160,7 @@ Window control is **not** part of this API. The panel page drives its own window
 |---|---|
 | `cards` | `CardState[]` — pushed after each 5-minute poll and on every restack |
 | `settings` | `AppSettings` — pushed when settings change in any window |
+| `update` | `UpdateInfo` — pushed when a newer release is found |
 
 ---
 
@@ -201,6 +218,10 @@ Pure functions exported from `src/frontend/format.js`. No side effects, no DOM.
 | `statusColor(theme, percent)` | `theme.coloring === "accent"` -> `theme.accent`; else `>= CRITICAL_AT` -> critical, `>= WARNING_AT` -> warning, else good |
 | `litCells(percent, cells)` | `round(percent / 100 * cells)`; **at least 1 when percent > 0**; clamped to `0..cells` |
 | `resetsInText(resetsAt, now)` | null -> `""`; already past -> `"now"`; < 1h -> `"{floor min}m"`; < 1d -> `"{floor h}h"`; else `"{floor d}d"` |
+
+| `runOutText(window, now)` | `null` without `runsOutAt`; else `{ short: "≈{resetsInText(runsOutAt)}", title: sentence with both countdowns }` |
+| `trayLevel(cards)` | highest percent of any window: `>= CRITICAL_AT` -> `"critical"`, `>= WARNING_AT` -> `"warning"`, else `"good"`; `null` with no windows |
+| `trayTooltip(cards)` | one `"{name} {percentText(highest)}"` line per card with windows, at most 127 chars |
 
 `resetsInText`'s `now` is a `Date`; when omitted it defaults to `new Date()`.
 
@@ -269,8 +290,12 @@ Package D writes `src/frontend/panel.css` only — **do not touch index.html or 
 ```
 --panel, --panel-alpha, --accent, --text-primary, --text-secondary,
 --text-muted, --track, --border, --segment-radius, --segment-width,
---panel-width, --font
+--panel-width, --font, --critical
 ```
+
+Projection marks: `.meter__ghost` (inside `.meter__track`, before `.meter__fill`, width =
+`min(projected, 100)%`), `.cell.is-projected` for the segmented style, and
+`.meter__reset.is-runout` / `.compact__slot.is-runout` when `runsOutAt` is set.
 
 Per-meter fill colour is set on `.meter` as `--meter-fill`.
 `.badge` carries `--badge-bg` and `--badge-fg`.
