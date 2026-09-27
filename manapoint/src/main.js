@@ -176,12 +176,17 @@ const handlers = {
     return true;
   },
   set_alerts: ({ enabled }) => updateSettings((s) => (s.alerts = Boolean(enabled))),
-  set_visible_windows: ({ id, kinds }) =>
-    updateSettings((s) => {
+  set_visible_windows: async ({ id, kinds }) => {
+    const updated = await updateSettings((s) => {
       const map = { ...(s.visibleWindows ?? {}) };
       map[String(id)] = Array.isArray(kinds) ? kinds.filter((k) => typeof k === "string") : [];
       s.visibleWindows = map;
-    }),
+    });
+    // The panel renders the cards it already holds: push the narrowed list at
+    // once instead of waiting for the next poll, like set_provider_enabled does.
+    pushCards();
+    return updated;
+  },
 
   set_theme: ({ name }) => updateSettings((s) => (s.themeName = String(name))),
   set_opacity: ({ value }) => updateSettings((s) => (s.panelOpacity = Number(value))),
