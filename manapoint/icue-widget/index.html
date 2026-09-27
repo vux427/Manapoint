@@ -8,8 +8,34 @@
   <link rel="stylesheet" href="styles/main.css" />
   <meta name="x-icue-property" content="endpointUrl" data-label="tr('Local endpoint')" data-type="textfield" data-default="'http://127.0.0.1:47901/v1/usage'" />
   <meta name="x-icue-property" content="refreshSec" data-label="tr('Refresh interval (s)')" data-type="slider" data-default="60" data-min="15" data-max="300" data-step="15" />
+  <meta name="x-icue-property" content="show_opencode_go_rolling" data-label="'5H'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_opencode_go_weekly" data-label="'WEEK'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_opencode_go_monthly" data-label="'MONTH'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_claude_code_rolling" data-label="'5H'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_claude_code_weekly" data-label="'WEEK'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_claude_code_monthly" data-label="'MONTH'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_codex_rolling" data-label="'5H'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_codex_weekly" data-label="'WEEK'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_codex_monthly" data-label="'MONTH'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_grok_rolling" data-label="'5H'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_grok_weekly" data-label="'WEEK'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_grok_monthly" data-label="'MONTH'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_antigravity_gemini_rolling" data-label="'5H'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_antigravity_gemini_weekly" data-label="'WEEK'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_antigravity_gemini_monthly" data-label="'MONTH'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_antigravity_3p_rolling" data-label="'5H'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_antigravity_3p_weekly" data-label="'WEEK'" data-type="switch" data-default="true" />
+  <meta name="x-icue-property" content="show_antigravity_3p_monthly" data-label="'MONTH'" data-type="switch" data-default="true" />
   <script id="x-icue-groups" type="application/json">
-    [{ "title": "tr('Settings')", "properties": ["endpointUrl", "refreshSec"] }]
+    [
+      { "title": "tr('Settings')", "properties": ["endpointUrl", "refreshSec"] },
+      { "title": "tr('opencode Go')", "properties": ["show_opencode_go_rolling", "show_opencode_go_weekly", "show_opencode_go_monthly"] },
+      { "title": "tr('Claude Code')", "properties": ["show_claude_code_rolling", "show_claude_code_weekly", "show_claude_code_monthly"] },
+      { "title": "tr('Codex')", "properties": ["show_codex_rolling", "show_codex_weekly", "show_codex_monthly"] },
+      { "title": "tr('Grok')", "properties": ["show_grok_rolling", "show_grok_weekly", "show_grok_monthly"] },
+      { "title": "tr('Antigravity Gemini')", "properties": ["show_antigravity_gemini_rolling", "show_antigravity_gemini_weekly", "show_antigravity_gemini_monthly"] },
+      { "title": "tr('Antigravity Claude/GPT')", "properties": ["show_antigravity_3p_rolling", "show_antigravity_3p_weekly", "show_antigravity_3p_monthly"] }
+    ]
   </script>
 </head>
 <body>

@@ -4,7 +4,13 @@
       "Manapoint Usage": "Manapoint Usage",
       "Settings": "Settings",
       "Local endpoint": "Local endpoint",
-      "Refresh interval (s)": "Refresh interval (s)"
+      "Refresh interval (s)": "Refresh interval (s)",
+      "opencode Go": "opencode Go",
+      "Claude Code": "Claude Code",
+      "Codex": "Codex",
+      "Grok": "Grok",
+      "Antigravity Gemini": "Antigravity Gemini",
+      "Antigravity Claude/GPT": "Antigravity Claude/GPT"
     }
   },
   "zh_TW": {
@@ -12,7 +18,13 @@
       "Manapoint Usage": "Manapoint 用量",
       "Settings": "設定",
       "Local endpoint": "Manapoint 本機端點",
-      "Refresh interval (s)": "更新間隔（秒）"
+      "Refresh interval (s)": "更新間隔（秒）",
+      "opencode Go": "opencode Go",
+      "Claude Code": "Claude Code",
+      "Codex": "Codex",
+      "Grok": "Grok",
+      "Antigravity Gemini": "Antigravity Gemini",
+      "Antigravity Claude/GPT": "Antigravity Claude/GPT"
     }
   }
 }

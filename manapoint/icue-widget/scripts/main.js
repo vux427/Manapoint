@@ -23,6 +23,24 @@ function intervalMs() {
   return Math.min(300, Math.max(15, s)) * 1000;
 }
 
+function kindKey(kind) {
+  return kind === "Rolling" ? "rolling" : kind === "Weekly" ? "weekly" : kind === "Monthly" ? "monthly" : String(kind).toLowerCase();
+}
+
+// Per-provider, per-window visibility from the settings switches.
+// Missing properties (older installs) default to visible.
+function showWindow(id, kind) {
+  var key = "show_" + String(id).replace(/-/g, "_") + "_" + kindKey(kind);
+  var v;
+  try {
+    v = Function("return typeof " + key + ' !== "undefined" ? ' + key + " : undefined")();
+  } catch (e) {
+    return true;
+  }
+  if (v === undefined || v === null || v === "") return true;
+  return v !== false && v !== "false" && v !== 0 && v !== "0";
+}
+
 function kindLabel(kind) {
   return kind === "Rolling" ? "5H" : kind === "Weekly" ? "WEEK" : kind === "Monthly" ? "MONTH" : String(kind);
 }
@@ -61,14 +79,18 @@ function render(data) {
   var html = "";
   (data.cards || []).forEach(function (card) {
     // No header line: the badge rides on every window row to save vertical space.
+    // A card with every window switched off leaves no rows and is skipped,
+    // unless it carries a note or error worth showing.
+    var visible = (card.windows || []).filter(function (w) { return showWindow(card.id, w.kind); });
+    var aside = card.error || card.note;
+    if (!visible.length && !aside) return;
     html += '<div class="card">';
-    (card.windows || []).forEach(function (w) {
+    visible.forEach(function (w) {
       var p = Math.max(0, Math.min(100, w.percent));
       html += '<div class="win">' + badgeHtml(card.badge) + '<span class="k">' + esc(kindLabel(w.kind)) + "</span>" +
         '<div class="track"><span class="fill" style="width: ' + p + "%; background: " + barColor(w.percent) + '"></span></div>' +
         '<span class="pct">' + Math.round(w.percent) + "%</span></div>";
     });
-    var aside = card.error || card.note;
     if (aside) html += '<div class="sub">' + esc(aside) + "</div>";
     html += "</div>";
   });
