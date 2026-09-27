@@ -27,9 +27,10 @@ function esc(s) {
   });
 }
 
-function setStatus(ok, when) {
-  document.getElementById("dot").className = ok ? "" : "off";
-  document.getElementById("ago").textContent = ok ? when : "offline";
+function setStatus(ok) {
+  if (!ok && !document.getElementById("cards").hasChildNodes()) {
+    document.getElementById("cards").innerHTML = '<div class="sub">offline, retrying</div>';
+  }
 }
 
 function render(data) {
@@ -49,11 +50,6 @@ function render(data) {
   document.getElementById("cards").innerHTML = html || '<div class="sub">no data</div>';
 }
 
-function stamp() {
-  var d = new Date();
-  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-}
-
 function refresh() {
   fetch(endpoint(), { cache: "no-store" })
     .then(function (res) {
@@ -62,7 +58,7 @@ function refresh() {
     })
     .then(function (data) {
       render(data);
-      setStatus(true, stamp());
+      setStatus(true);
     })
     .catch(function () {
       setStatus(false);

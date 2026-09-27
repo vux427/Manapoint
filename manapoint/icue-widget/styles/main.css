@@ -6,21 +6,16 @@ body {
   background: #16191e;
   color: #e4e9f0;
   font-family: system-ui, "Segoe UI", "Microsoft JhengHei", sans-serif;
-  font-size: 11px;
-  line-height: 1.4;
-  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 10px 12px;
   overflow: hidden;
 }
-#head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-#dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; flex: none; }
-#dot.off { background: #f87171; }
-#title { font-weight: 700; }
-#ago { margin-left: auto; color: #b7bbc2; font-size: 10px; white-space: nowrap; }
-.card { margin-bottom: 6px; }
-.cname { color: #c8d0da; font-weight: 600; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.win { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-.k { width: 34px; flex: none; color: #b7bbc2; font-size: 9px; font-weight: 600; }
-.track { flex: 1; height: 4px; border-radius: 2px; background: #2e333c; overflow: hidden; min-width: 0; }
+.card { margin-bottom: 8px; }
+.cname { color: #c8d0da; font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+.k { width: 40px; flex: none; color: #b7bbc2; font-size: 11px; font-weight: 600; }
+.track { flex: 1; height: 6px; border-radius: 3px; background: #2e333c; overflow: hidden; min-width: 0; }
 .fill { display: block; height: 100%; border-radius: inherit; }
-.pct { width: 30px; flex: none; text-align: right; color: #c8d0da; }
-.sub { color: #b7bbc2; font-size: 10px; margin-top: 2px; }
+.pct { width: 36px; flex: none; text-align: right; color: #c8d0da; font-size: 12px; }
+.sub { color: #b7bbc2; font-size: 11px; margin-top: 3px; }
