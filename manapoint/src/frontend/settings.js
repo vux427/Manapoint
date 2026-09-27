@@ -62,7 +62,6 @@ function renderAll() {
   renderLayout();
   renderOpacity();
   renderProviders();
-  renderWidget();
   renderAutoStart();
   renderAlerts();
   renderVersion();
@@ -269,7 +268,25 @@ function buildProviderRow(provider, index) {
   hint.textContent = provider.credentialHint;
   text.append(name, hint);
 
-  main.append(grip, checkbox, buildBadge(provider), text);
+  // Window toggles live on the same row: one checkbox per window kind for the
+  // desktop panel and tray. The keyboard widget is not affected.
+  const kinds = document.createElement("div");
+  kinds.className = "provider-kinds";
+  const shown = visibleKinds(provider.id);
+  for (const { kind, label } of WINDOW_KINDS) {
+    const item = document.createElement("label");
+    item.className = "provider-kind";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.dataset.kind = kind;
+    box.checked = shown.includes(kind);
+    box.setAttribute("aria-label", `${provider.name} ${label}`);
+    box.addEventListener("change", () => onVisibleToggle(provider.id));
+    item.append(box, document.createTextNode(label));
+    kinds.appendChild(item);
+  }
+
+  main.append(grip, checkbox, buildBadge(provider), text, kinds);
   row.append(before, main, after);
 
   row.addEventListener("dragstart", (event) => onDragStart(event, row));
@@ -294,63 +311,28 @@ async function onProviderToggle(id, enabled) {
 // per window kind. The backend persists the visible set per provider; an absent
 // entry means all visible. The keyboard widget is not affected — it filters
 // with its own switches in iCUE.
-const WIDGET_KINDS = [
+const WINDOW_KINDS = [
   { kind: "Rolling", label: "5H" },
   { kind: "Weekly", label: "WEEK" },
   { kind: "Monthly", label: "MONTH" },
 ];
 
-function widgetKinds(id) {
+function visibleKinds(id) {
   const narrowed = appState.settings.visibleWindows?.[id];
-  return Array.isArray(narrowed) ? narrowed : WIDGET_KINDS.map((k) => k.kind);
+  return Array.isArray(narrowed) ? narrowed : WINDOW_KINDS.map((k) => k.kind);
 }
 
-function renderWidget() {
-  const list = byId("widget-list");
-  list.replaceChildren();
-  for (const provider of appState.providers) {
-    const row = document.createElement("li");
-    row.className = "widget-row";
-    row.dataset.id = provider.id;
-
-    const head = document.createElement("div");
-    head.className = "widget-row__head";
-    const name = document.createElement("span");
-    name.className = "widget-name";
-    name.textContent = provider.name;
-    head.append(buildBadge(provider), name);
-
-    const boxes = document.createElement("div");
-    boxes.className = "widget-kinds";
-    const shown = widgetKinds(provider.id);
-    for (const { kind, label } of WIDGET_KINDS) {
-      const item = document.createElement("label");
-      item.className = "widget-kind";
-      const box = document.createElement("input");
-      box.type = "checkbox";
-      box.dataset.kind = kind;
-      box.checked = shown.includes(kind);
-      box.setAttribute("aria-label", `${provider.name} ${label}`);
-      box.addEventListener("change", () => onWidgetToggle(provider.id));
-      item.append(box, document.createTextNode(label));
-      boxes.appendChild(item);
-    }
-    row.append(head, boxes);
-    list.appendChild(row);
-  }
-}
-
-async function onWidgetToggle(id) {
-  const row = document.querySelector(`#widget-list li[data-id="${CSS.escape(id)}"]`);
-  const kinds = [...row.querySelectorAll("input[type='checkbox']")]
+async function onVisibleToggle(id) {
+  const row = document.querySelector(`#provider-list li[data-id="${CSS.escape(id)}"]`);
+  const kinds = [...row.querySelectorAll(".provider-kinds input[type='checkbox']")]
     .filter((box) => box.checked)
     .map((box) => box.dataset.kind);
   try {
     appState.settings = await invoke("set_visible_windows", { id, kinds });
-    renderWidget();
+    renderProviders();
   } catch (err) {
     showError(messageOf(err));
-    renderWidget();
+    renderProviders();
   }
 }
 
