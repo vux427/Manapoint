@@ -85,6 +85,8 @@ The other themes give each provider its own column, header on top:
   after being high (can be turned off in settings)
 - Burn-rate projection: from the last day's samples, hovering a meter shows when it
   would empty at this pace, if before its reset (reference only)
+- Keyboard LCD: show usage on an iCUE LCD keyboard (VANGUARD 96 etc.), see
+  `manapoint/icue-widget/` (needs Manapoint running locally for its loopback endpoint)
 - Minimise to the tray from the context menu; the tray icon turns amber or red with the
   tightest window, and its tooltip lists every provider
 - Auto-update: checks GitHub for a new release daily; the context menu then offers

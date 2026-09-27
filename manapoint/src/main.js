@@ -8,6 +8,7 @@ import { alertsFor, notification } from "./lib/alerts.js";
 import * as cache from "./lib/cache.js";
 import * as cards from "./lib/cards.js";
 import { env, readText, setSpawner } from "./lib/io.js";
+import * as localApi from "./lib/local_api.js";
 import * as relaunch from "./lib/relaunch.js";
 import * as settingsFile from "./lib/settings.js";
 import * as trend from "./lib/trend.js";
@@ -237,6 +238,9 @@ export async function init(app) {
   setSpawner((argv, opts) => app.spawnHidden(argv, opts));
   await ready;
   pushCards();
+  // Read-only loopback feed for companions (the iCUE LCD widget). It serves
+  // whatever the panel shows and never blocks startup when the port is taken.
+  localApi.start(view, env, (m) => console.log(m));
 
   const poll = async () => {
     try {
