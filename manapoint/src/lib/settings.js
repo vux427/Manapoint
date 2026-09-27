@@ -10,6 +10,9 @@ export const MAX_OPACITY = 1.0;
 
 export const LAYOUTS = ["Vertical", "Horizontal"];
 
+/** UsageWindow kinds the keyboard widget may show, per provider. */
+export const WIDGET_KINDS = ["Rolling", "Weekly", "Monthly"];
+
 export function defaults() {
   return {
     themeName: "石墨",
@@ -18,10 +21,19 @@ export function defaults() {
     enabledProviders: null, // null = never configured, so everything shows
     providerOrder: null, // null = registry order
     alerts: true, // notify when a window crosses 80% / 95%, or resets after being high
+    widgetWindows: null, // null = never configured; per-provider visible kinds for the keyboard widget
   };
 }
 
 const idList = (v) => (Array.isArray(v) && v.every((x) => typeof x === "string") ? v : null);
+
+/** Anything but an array means "never narrowed": every kind stays visible. */
+const widgetKinds = (v) => (Array.isArray(v) ? v.filter((x) => WIDGET_KINDS.includes(x)) : [...WIDGET_KINDS]);
+
+const widgetWindows = (v) => {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  return Object.fromEntries(Object.entries(v).map(([id, kinds]) => [id, widgetKinds(kinds)]));
+};
 
 /**
  * Pull any stored shape back into range. Older files may hold values outside the
@@ -40,6 +52,7 @@ export function normalize(raw) {
     enabledProviders: idList(raw.enabledProviders),
     providerOrder: idList(raw.providerOrder),
     alerts: typeof raw.alerts === "boolean" ? raw.alerts : d.alerts,
+    widgetWindows: widgetWindows(raw.widgetWindows),
   };
 }
 

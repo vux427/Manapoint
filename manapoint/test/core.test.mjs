@@ -22,8 +22,14 @@ describe("settings", () => {
     const s = normalize({ themeName: "魔力", cardsLayout: "Horizontal", panelOpacity: 0.7,
       enabledProviders: ["codex"], providerOrder: ["codex", "grok"] });
     assert.deepEqual(s, { themeName: "魔力", cardsLayout: "Horizontal", panelOpacity: 0.7,
-      enabledProviders: ["codex"], providerOrder: ["codex", "grok"], alerts: true });
+      enabledProviders: ["codex"], providerOrder: ["codex", "grok"], alerts: true, widgetWindows: null });
     assert.equal(normalize({ alerts: false }).alerts, false);
+  });
+
+  it("keeps per-provider widget windows, dropping unknown kinds", () => {
+    assert.deepEqual(normalize({ widgetWindows: { codex: ["Weekly", "Daily"] } }).widgetWindows, { codex: ["Weekly"] });
+    assert.deepEqual(normalize({ widgetWindows: { codex: "Weekly" } }).widgetWindows, { codex: ["Rolling", "Weekly", "Monthly"] });
+    assert.equal(normalize({}).widgetWindows, null);
   });
 });
 

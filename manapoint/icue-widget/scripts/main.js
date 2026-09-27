@@ -79,11 +79,13 @@ function render(data) {
   var html = "";
   (data.cards || []).forEach(function (card) {
     // No header line: the badge rides on every window row to save vertical space.
-    // A card with every window switched off leaves no rows and is skipped,
-    // unless it carries a note or error worth showing.
-    var visible = (card.windows || []).filter(function (w) { return showWindow(card.id, w.kind); });
-    var aside = card.error || card.note;
-    if (!visible.length && !aside) return;
+    // A card with every window switched off leaves no rows and is skipped.
+    // Either side can hide a window: the endpoint's `visible` flag (from
+    // Manapoint's own settings) and the widget's local switches (AND logic).
+    var visible = (card.windows || []).filter(function (w) {
+      return w.visible !== false && showWindow(card.id, w.kind);
+    });
+    if (!visible.length) return;
     html += '<div class="card">';
     visible.forEach(function (w) {
       var p = Math.max(0, Math.min(100, w.percent));
@@ -91,7 +93,6 @@ function render(data) {
         '<div class="track"><span class="fill" style="width: ' + p + "%; background: " + barColor(w.percent) + '"></span></div>' +
         '<span class="pct">' + Math.round(w.percent) + "%</span></div>";
     });
-    if (aside) html += '<div class="sub">' + esc(aside) + "</div>";
     html += "</div>";
   });
   document.getElementById("cards").innerHTML = html || '<div class="sub">no data</div>';

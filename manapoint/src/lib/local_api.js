@@ -20,8 +20,11 @@ const CORS = {
 
 const JSON_TYPE = "application/json";
 
-/** Cards as the panel sees them → the widget payload. New objects only. */
-export function payload(cards, now = Date.now()) {
+/** Cards as the panel sees them → the widget payload. New objects only.
+ * `settings.widgetWindows` narrows each window to a `visible` flag; the panel
+ * ignores it, the widget hides flagged windows. Absent settings mean visible. */
+export function payload(cards, settings = null, now = Date.now()) {
+  const narrowed = settings?.widgetWindows ?? null;
   return {
     app: "manapoint",
     version: 1,
@@ -36,13 +39,14 @@ export function payload(cards, now = Date.now()) {
         kind: w.kind,
         percent: w.percent,
         resetsAt: w.resetsAt ?? null,
+        visible: !narrowed?.[c.id] || narrowed[c.id].includes(w.kind),
       })),
     })),
   };
 }
 
 /** Pure routing: { status, headers, body } for any method + path. */
-export function route(method, path, cards, now = Date.now()) {
+export function route(method, path, cards, settings = null, now = Date.now()) {
   if (method === "OPTIONS") return { status: 204, headers: { ...CORS }, body: "" };
   if (method !== "GET") {
     return { status: 405, headers: { ...CORS, "Content-Type": JSON_TYPE }, body: '{"error":"method not allowed"}' };
@@ -51,7 +55,7 @@ export function route(method, path, cards, now = Date.now()) {
     return {
       status: 200,
       headers: { ...CORS, "Content-Type": JSON_TYPE },
-      body: JSON.stringify(payload(cards, now)),
+      body: JSON.stringify(payload(cards, settings, now)),
     };
   }
   if (path === "/" || path === "/v1") {
@@ -67,8 +71,9 @@ export function portFromEnv(env) {
   return Number.isInteger(raw) && raw > 0 && raw < 65536 ? raw : DEFAULT_PORT;
 }
 
-/** Start the loopback server; returns the server or null when off. */
-export function start(getCards, env, log = () => {}) {
+/** Start the loopback server; returns the server or null when off.
+ * getSnapshot() returns { cards, settings } fresh per request. */
+export function start(getSnapshot, env, log = () => {}) {
   const port = portFromEnv(env);
   const serve = globalThis.tjs?.serve;
   if (port === null || typeof serve !== "function") return null;
@@ -77,7 +82,8 @@ export function start(getCards, env, log = () => {}) {
       listenIp: LOOPBACK,
       port,
       fetch: async (req) => {
-        const r = route(req.method, new URL(req.url).pathname, getCards());
+        const snap = getSnapshot();
+        const r = route(req.method, new URL(req.url).pathname, snap.cards, snap.settings);
         // 204 must carry a null body or the Response constructor throws.
         return new Response(r.status === 204 ? null : r.body, { status: r.status, headers: r.headers });
       },

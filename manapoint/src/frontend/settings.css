@@ -219,6 +219,53 @@ label {
   color: #9aa3af;
 }
 
+/* Keyboard-widget window toggles: one row per provider, three checkboxes. */
+#widget-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.widget-row {
+  margin: 0 0 6px;
+  border: 1px solid #2a2f38;
+  border-radius: 8px;
+  background: #1a1e25;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.widget-row__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.widget-name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.widget-kinds {
+  display: flex;
+  gap: 10px;
+  flex: none;
+}
+
+.widget-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #c8d0da;
+}
+
 .badge {
   display: inline-flex;
   flex: none;

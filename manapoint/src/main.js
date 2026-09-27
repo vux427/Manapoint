@@ -171,6 +171,12 @@ const handlers = {
     return true;
   },
   set_alerts: ({ enabled }) => updateSettings((s) => (s.alerts = Boolean(enabled))),
+  set_widget_windows: ({ id, kinds }) =>
+    updateSettings((s) => {
+      const map = { ...(s.widgetWindows ?? {}) };
+      map[String(id)] = Array.isArray(kinds) ? kinds.filter((k) => typeof k === "string") : [];
+      s.widgetWindows = map;
+    }),
 
   set_theme: ({ name }) => updateSettings((s) => (s.themeName = String(name))),
   set_opacity: ({ value }) => updateSettings((s) => (s.panelOpacity = Number(value))),
@@ -240,7 +246,7 @@ export async function init(app) {
   pushCards();
   // Read-only loopback feed for companions (the iCUE LCD widget). It serves
   // whatever the panel shows and never blocks startup when the port is taken.
-  localApi.start(view, env, (m) => console.log(m));
+  localApi.start(() => ({ cards: view(), settings: state.settings }), env, (m) => console.log(m));
 
   const poll = async () => {
     try {

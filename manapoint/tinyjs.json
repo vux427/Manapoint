@@ -3,7 +3,7 @@
   "title": "Manapoint",
   "size": "252x240",
   "id": "com.worknite.manapoint",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "minTinyjsVersion": "0.42.0",
   "icon": "icon.png",
   "activation": "accessory",

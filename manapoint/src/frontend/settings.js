@@ -62,6 +62,7 @@ function renderAll() {
   renderLayout();
   renderOpacity();
   renderProviders();
+  renderWidget();
   renderAutoStart();
   renderAlerts();
   renderVersion();
@@ -286,6 +287,69 @@ async function onProviderToggle(id, enabled) {
   } catch (err) {
     showError(messageOf(err));
     renderProviders();
+  }
+}
+
+// Keyboard-widget window toggles: per provider, one checkbox per window kind.
+// The backend persists the visible set per provider; an absent entry means all
+// visible. The desktop panel never reads this — widget only.
+const WIDGET_KINDS = [
+  { kind: "Rolling", label: "5H" },
+  { kind: "Weekly", label: "WEEK" },
+  { kind: "Monthly", label: "MONTH" },
+];
+
+function widgetKinds(id) {
+  const narrowed = appState.settings.widgetWindows?.[id];
+  return Array.isArray(narrowed) ? narrowed : WIDGET_KINDS.map((k) => k.kind);
+}
+
+function renderWidget() {
+  const list = byId("widget-list");
+  list.replaceChildren();
+  for (const provider of appState.providers) {
+    const row = document.createElement("li");
+    row.className = "widget-row";
+    row.dataset.id = provider.id;
+
+    const head = document.createElement("div");
+    head.className = "widget-row__head";
+    const name = document.createElement("span");
+    name.className = "widget-name";
+    name.textContent = provider.name;
+    head.append(buildBadge(provider), name);
+
+    const boxes = document.createElement("div");
+    boxes.className = "widget-kinds";
+    const shown = widgetKinds(provider.id);
+    for (const { kind, label } of WIDGET_KINDS) {
+      const item = document.createElement("label");
+      item.className = "widget-kind";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.dataset.kind = kind;
+      box.checked = shown.includes(kind);
+      box.setAttribute("aria-label", `${provider.name} ${label}`);
+      box.addEventListener("change", () => onWidgetToggle(provider.id));
+      item.append(box, document.createTextNode(label));
+      boxes.appendChild(item);
+    }
+    row.append(head, boxes);
+    list.appendChild(row);
+  }
+}
+
+async function onWidgetToggle(id) {
+  const row = document.querySelector(`#widget-list li[data-id="${CSS.escape(id)}"]`);
+  const kinds = [...row.querySelectorAll("input[type='checkbox']")]
+    .filter((box) => box.checked)
+    .map((box) => box.dataset.kind);
+  try {
+    appState.settings = await invoke("set_widget_windows", { id, kinds });
+    renderWidget();
+  } catch (err) {
+    showError(messageOf(err));
+    renderWidget();
   }
 }
 

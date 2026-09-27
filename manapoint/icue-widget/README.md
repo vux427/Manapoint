@@ -15,7 +15,9 @@ icuewidget package .
 
 1. 開 iCUE → widgets 區 → 按 **+** → 選產生的 `.icuewidget` 檔。
 2. 把 widget 放到你的 LCD 上。
-3. 設定裡可改端點 URL（預設 `http://127.0.0.1:47901/v1/usage`）與更新間隔（15–300 秒，預設 60 秒）。
+3. 設定裡可改端點 URL（預設 `http://127.0.0.1:47901/v1/usage`）與更新間隔（15–300 秒，預設 60 秒），
+   也可按每家開關 5H / WEEK / MONTH；Manapoint 設定頁的「鍵盤 Widget 顯示」是同一組開關的另一面，
+   任一邊關掉就隱藏。
 
 ## 驗證端點
 
@@ -27,6 +29,7 @@ Invoke-RestMethod http://127.0.0.1:47901/v1/usage | ConvertTo-Json -Depth 5
 
 ## 疑難排解
 
+- LCD 只顯示數字列：附註與錯誤文字（「上次數字…」這類系統訊息）一律不顯示，看面板才有。
 - LCD 顯示 offline：先確認 Manapoint 新版有在跑，再確認上面的 URL 打得開。
 - Port 被佔用：設環境變數 `MANAPOINT_LOCAL_API_PORT` 換 port，widget 設定裡的端點 URL 跟著改。
 - 不想開這個端點：設 `MANAPOINT_LOCAL_API=0`（端點只綁 loopback，本來就只聽本機）。
