@@ -1,132 +1,31 @@
-<!doctype html>
-<html lang="zh-Hant">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Manapoint Usage</title>
-<link rel="icon" type="image/svg+xml" href="resources/icon.svg" />
-<meta name="x-icue-property" content="endpointUrl" data-label="Manapoint 本機端點" data-type="textfield" data-default="'http://127.0.0.1:47901/v1/usage'" />
-<meta name="x-icue-property" content="refreshSec" data-label="更新間隔（秒）" data-type="slider" data-default="60" data-min="15" data-max="300" data-step="15" />
-<style>
-  /* Compact dark list: one mini-bar row per usage window, fluid width so it
-     fits keyboard, dashboard and pump LCDs without per-device tweaks. */
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
-  body {
-    background: #16191e;
-    color: #e4e9f0;
-    font-family: system-ui, "Segoe UI", "Microsoft JhengHei", sans-serif;
-    font-size: 11px;
-    line-height: 1.4;
-    padding: 8px 10px;
-    overflow: hidden;
-  }
-  #head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-  #dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; flex: none; }
-  #dot.off { background: #f87171; }
-  #title { font-weight: 700; }
-  #ago { margin-left: auto; color: #b7bbc2; font-size: 10px; white-space: nowrap; }
-  .card { margin-bottom: 6px; }
-  .cname { color: #c8d0da; font-weight: 600; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .win { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-  .k { width: 34px; flex: none; color: #b7bbc2; font-size: 9px; font-weight: 600; }
-  .track { flex: 1; height: 4px; border-radius: 2px; background: #2e333c; overflow: hidden; min-width: 0; }
-  .fill { display: block; height: 100%; border-radius: inherit; }
-  .pct { width: 30px; flex: none; text-align: right; color: #c8d0da; }
-  .sub { color: #b7bbc2; font-size: 10px; margin-top: 2px; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>tr('Manapoint Usage')</title>
+  <link rel="icon" href="resources/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <meta name="x-icue-property" content="endpointUrl" data-label="tr('Local endpoint')" data-type="textfield" data-default="'http://127.0.0.1:47901/v1/usage'" />
+  <meta name="x-icue-property" content="refreshSec" data-label="tr('Refresh interval (s)')" data-type="slider" data-default="60" data-min="15" data-max="300" data-step="15" />
+  <script id="x-icue-groups" type="application/json">
+    [{ "title": "tr('Settings')", "properties": ["endpointUrl", "refreshSec"] }]
+  </script>
 </head>
 <body>
-<div id="head"><span id="dot"></span><span id="title">Manapoint</span><span id="ago"></span></div>
-<div id="cards"></div>
-<script>
-  // Polls the Manapoint loopback endpoint and renders one mini-bar per window.
-  // iCUE injects endpointUrl / refreshSec globals from the widget properties;
-  // typeof-guards keep it working in preview mode before injection happens.
-  icueEvents = {
-    onICUEInitialized: boot,
-    onDataUpdated: reboot,
-  };
-
-  var timer = 0;
-
-  function endpoint() {
-    return (typeof endpointUrl !== "undefined" && endpointUrl) || "http://127.0.0.1:47901/v1/usage";
-  }
-
-  function intervalMs() {
-    var s = (typeof refreshSec !== "undefined" && refreshSec) || 60;
-    s = Number(s) || 60;
-    return Math.min(300, Math.max(15, s)) * 1000;
-  }
-
-  function kindLabel(kind) {
-    return kind === "Rolling" ? "5H" : kind === "Weekly" ? "WEEK" : kind === "Monthly" ? "MONTH" : String(kind);
-  }
-
-  function barColor(percent) {
-    return percent >= 85 ? "#f87171" : percent >= 60 ? "#fbbf24" : "#4ade80";
-  }
-
-  function esc(s) {
-    return String(s).replace(/[&<>"]/g, function (c) {
-      return c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&quot;";
-    });
-  }
-
-  function setStatus(ok, when) {
-    document.getElementById("dot").className = ok ? "" : "off";
-    document.getElementById("ago").textContent = ok ? when : "offline";
-  }
-
-  function render(data) {
-    var html = "";
-    (data.cards || []).forEach(function (card) {
-      html += '<div class="card"><div class="cname">' + esc(card.name) + "</div>";
-      (card.windows || []).forEach(function (w) {
-        var p = Math.max(0, Math.min(100, w.percent));
-        html += '<div class="win"><span class="k">' + esc(kindLabel(w.kind)) + "</span>" +
-          '<div class="track"><span class="fill" style="width: ' + p + "%; background: " + barColor(w.percent) + '"></span></div>' +
-          '<span class="pct">' + Math.round(w.percent) + "%</span></div>";
-      });
-      var aside = card.error || card.note;
-      if (aside) html += '<div class="sub">' + esc(aside) + "</div>";
-      html += "</div>";
-    });
-    document.getElementById("cards").innerHTML = html || '<div class="sub">no data</div>';
-  }
-
-  function stamp() {
-    var d = new Date();
-    var p = function (n) { return (n < 10 ? "0" : "") + n; };
-    return p(d.getHours()) + ":" + p(d.getMinutes());
-  }
-
-  function refresh() {
-    fetch(endpoint(), { cache: "no-store" })
-      .then(function (res) {
-        if (!res.ok) throw new Error("http " + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        render(data);
-        setStatus(true, stamp());
-      })
-      .catch(function () {
-        setStatus(false);
-      });
-  }
-
-  function reboot() {
-    if (timer) clearInterval(timer);
-    refresh();
-    timer = setInterval(refresh, intervalMs());
-  }
-
-  function boot() {
-    reboot();
-  }
-
-  if (typeof iCUE_initialized !== "undefined" && iCUE_initialized) boot();
-</script>
+  <div id="head"><span id="dot"></span><span id="title">Manapoint</span><span id="ago"></span></div>
+  <div id="cards"></div>
+  <script src="scripts/main.js"></script>
+  <script>
+    icueEvents = {
+      onICUEInitialized: boot,
+      onDataUpdated: reboot
+    };
+    if (typeof iCUE_initialized !== "undefined") {
+      if (iCUE_initialized) {
+        boot();
+      }
+    }
+  </script>
 </body>
 </html>

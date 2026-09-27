@@ -1,0 +1,18 @@
+{
+  "en": {
+    "translation": {
+      "Manapoint Usage": "Manapoint Usage",
+      "Settings": "Settings",
+      "Local endpoint": "Local endpoint",
+      "Refresh interval (s)": "Refresh interval (s)"
+    }
+  },
+  "zh_TW": {
+    "translation": {
+      "Manapoint Usage": "Manapoint 用量",
+      "Settings": "設定",
+      "Local endpoint": "Manapoint 本機端點",
+      "Refresh interval (s)": "更新間隔（秒）"
+    }
+  }
+}

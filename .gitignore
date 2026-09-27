@@ -3,6 +3,9 @@ manapoint/.build/
 manapoint/dist/
 dist/
 
+# Packaged iCUE widget (build artifact; the release page carries it)
+manapoint/icue-widget/*.icuewidget
+
 # Node (only ever used to run the tests; the app ships no npm dependencies)
 node_modules/
 npm-debug.log*

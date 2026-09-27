@@ -37,6 +37,9 @@ Invoke-RestMethod http://127.0.0.1:47901/v1/usage | ConvertTo-Json -Depth 5
 ```
 icue-widget/
   manifest.json      widget 詮釋資料（id: com.manapoint.usage）
-  index.html         版面 + 輪詢邏輯（single file）
+  index.html         版面骨架（CSS/JS 拆外部檔，head 保持 XML-well-formed）
+  styles/main.css    版面樣式
+  scripts/main.js    輪詢與繪製邏輯
+  translation.json   英文 / 繁中字串
   resources/icon.svg widget 圖示
 ```
