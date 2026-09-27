@@ -362,6 +362,16 @@ body {
   font-size: 9px;
 }
 
+/* Multi-account compact rows after the first: a hairline groups one provider's
+   accounts. margin-top offsets the border+padding so the line costs ~1px.
+   Horizontal needs none: its segment dividers already separate the row. */
+#panel[data-layout="vertical"][data-meter="text"] #cards .card--compact.is-account-sequel,
+.panel[data-layout="vertical"][data-meter="text"] #cards .card--compact.is-account-sequel {
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  padding-top: 4px;
+  margin-top: -4px;
+}
+
 /* Compact horizontal: badge and slots share one line sized to content. */
 #panel[data-layout="horizontal"][data-meter="text"] #cards .card--compact,
 .panel[data-layout="horizontal"][data-meter="text"] #cards .card--compact {
@@ -410,7 +420,8 @@ body {
 }
 
 /* Multi-account cards: a small caption above each account's group of meters.
-   Only emitted when a card has more than one account. */
+   Only emitted when a card has more than one account. Captions after the first
+   carry a hairline above them; margin-top shrinks so the line costs ~2px. */
 #panel .meter-group,
 .panel .meter-group {
   font-size: 9px;
@@ -422,45 +433,14 @@ body {
   margin-top: 2px;
 }
 
-#panel .meter-group:first-child,
-.panel .meter-group:first-child {
+#panel .meter-group:not(:first-child),
+.panel .meter-group:not(:first-child) {
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  padding-top: 3px;
   margin-top: 0;
 }
 
-/* Burn-rate projection. The ghost sits under the fill and reaches where this pace
-   leaves the window at its reset; segmented meters dim the cells it would light. */
-#panel .meter__track,
-.panel .meter__track {
-  position: relative;
-}
-
-#panel .meter__ghost,
-.panel .meter__ghost {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: inherit;
-  background: var(--meter-fill);
-  opacity: 0.3;
-}
-
-#panel .meter__fill,
-.panel .meter__fill {
-  position: relative;
-}
-
-#panel .cell.is-projected,
-.panel .cell.is-projected {
-  background: color-mix(in srgb, var(--meter-fill) 30%, var(--track));
-}
-
-/* A window this pace empties before its reset: the countdown is to that moment. */
-#panel .meter__reset.is-runout,
-.panel .meter__reset.is-runout {
-  color: var(--critical);
-  font-weight: 600;
-}
-
-#panel .compact__slot.is-runout i,
-.panel .compact__slot.is-runout i {
-  color: var(--critical);
+#panel .meter-group:first-child,
+.panel .meter-group:first-child {
+  margin-top: 0;
 }

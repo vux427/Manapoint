@@ -87,21 +87,14 @@ function meterNode(window_, now) {
     if (theme.brackets) cells.appendChild(el("span", "meter__bracket", "["));
 
     const lit = litCells(window_.percent, theme.segmentCells);
-    const ahead = window_.projected ? litCells(Math.min(100, window_.projected), theme.segmentCells) : lit;
     for (let i = 0; i < theme.segmentCells; i++) {
-      cells.appendChild(el("i", i < lit ? "cell is-lit" : i < ahead ? "cell is-projected" : "cell"));
+      cells.appendChild(el("i", i < lit ? "cell is-lit" : "cell"));
     }
 
     if (theme.brackets) cells.appendChild(el("span", "meter__bracket", "]"));
     item.appendChild(cells);
   } else {
     const track = el("div", "meter__track");
-    // The ghost shows where this pace leaves the window at its reset.
-    if (window_.projected) {
-      const ghost = el("div", "meter__ghost");
-      ghost.style.width = `${Math.min(100, window_.projected)}%`;
-      track.appendChild(ghost);
-    }
     const fill = el("div", "meter__fill");
     fill.style.width = `${Math.max(0, Math.min(100, window_.percent))}%`;
     track.appendChild(fill);
@@ -114,9 +107,10 @@ function meterNode(window_, now) {
   value.appendChild(document.createTextNode(percentText(window_.percent)));
   item.appendChild(value);
 
-  // A window this pace empties early counts down to that instead of the reset.
+  // The projection stays a hover-only reference: the countdown always shows the
+  // reset, and the pace note lives in the tooltip when this pace empties early.
   const runOut = runOutText(window_, now);
-  const reset = el("span", runOut ? "meter__reset is-runout" : "meter__reset", runOut ? runOut.short : resetsInText(window_.resetsAt, now));
+  const reset = el("span", "meter__reset", resetsInText(window_.resetsAt, now));
   if (runOut) item.title = runOut.title;
   item.appendChild(reset);
   return item;
@@ -171,6 +165,8 @@ function compactCards(card) {
 
 function compactCard(card, group, first) {
   const article = el("article", "card card--compact");
+  // Sequel account rows of one provider carry a hook for the hairline divider.
+  if (!first) article.classList.add("is-account-sequel");
   article.dataset.provider = card.id;
   if (group.account) {
     article.dataset.account = group.account;
@@ -187,11 +183,9 @@ function compactCard(card, group, first) {
     // aligned across providers when one of them reports fewer windows.
     if (window_) {
       slot.style.setProperty("--meter-fill", statusColor(theme, window_.percent));
+      // Projection is hover-only here too: no inline mark, just the tooltip.
       const runOut = runOutText(window_);
-      if (runOut) {
-        slot.classList.add("is-runout");
-        slot.title = runOut.title;
-      }
+      if (runOut) slot.title = runOut.title;
       slot.appendChild(el("i", null, shortLabel(kind)));
       slot.appendChild(el("b", null, percentText(window_.percent)));
     }

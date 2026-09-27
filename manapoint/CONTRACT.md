@@ -274,7 +274,8 @@ Package D writes `src/frontend/panel.css` only — **do not touch index.html or 
       <span class="compact__note">—</span>              <!-- omitted when absent -->
     </article>
     <!-- multi-account compact cards: one article per account, same columns,
-         data-account="<label>" and title="<name> · <label>"; the note sits on the first -->
+         data-account="<label>" and title="<name> · <label>"; the note sits on the first,
+         rows after the first also carry "is-account-sequel" -->
     <article class="card card--compact" data-provider="opencode-go" data-account="work">
       <span class="badge">...</span>
       <span class="compact__slot" data-kind="Rolling"><i>5h</i><b>3%</b></span>
@@ -293,9 +294,13 @@ Package D writes `src/frontend/panel.css` only — **do not touch index.html or 
 --panel-width, --font, --critical
 ```
 
-Projection marks: `.meter__ghost` (inside `.meter__track`, before `.meter__fill`, width =
-`min(projected, 100)%`), `.cell.is-projected` for the segmented style, and
-`.meter__reset.is-runout` / `.compact__slot.is-runout` when `runsOutAt` is set.
+Projection is hover-only: when `runsOutAt` is set, the meter's `title` carries the
+`runOutText` sentence. There is no inline mark — no ghost bar, no projected
+cells, no countdown swap, no `is-runout` class.
+
+Multi-account dividers are CSS-only hairlines: `.meter-group:not(:first-child)`
+in meter themes, `.card--compact.is-account-sequel` in vertical compact
+(horizontal compact already separates its segments). No extra DOM.
 
 Per-meter fill colour is set on `.meter` as `--meter-fill`.
 `.badge` carries `--badge-bg` and `--badge-fg`.

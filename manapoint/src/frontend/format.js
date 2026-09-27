@@ -121,8 +121,8 @@ export function trayTooltip(cards) {
   return text.length > 127 ? text.slice(0, 126) + "…" : text;
 }
 
-// The meter's projection hint: "≈2h" when this pace empties the window before it
-// resets, with the full sentence for the tooltip. Nothing when there is no projection.
+// The projection hint is hover-only: the full sentence for the tooltip when this
+// pace empties the window before it resets. Nothing when there is no projection.
 export function runOutText(window_, now = new Date()) {
   if (!window_.runsOutAt) return null;
   const inText = resetsInText(window_.runsOutAt, now);
