@@ -49,7 +49,7 @@ function badgeHtml(badge) {
   var inner;
   var icon = badge && badge.icon && ICONS[badge.icon];
   if (icon) {
-    inner = '<svg viewBox="0 0 24 24" width="13" height="13"><path d="' + icon.d + '" fill="' + fg + '" fill-rule="' + icon.rule + '"/></svg>';
+    inner = '<svg viewBox="0 0 24 24" width="12" height="12"><path d="' + icon.d + '" fill="' + fg + '" fill-rule="' + icon.rule + '"/></svg>';
   } else {
     var text = (badge && badge.text) || "?";
     inner = esc(text.slice(0, 1));
@@ -60,11 +60,11 @@ function badgeHtml(badge) {
 function render(data) {
   var html = "";
   (data.cards || []).forEach(function (card) {
-    html += '<div class="card"><div class="chead">' + badgeHtml(card.badge) +
-      '<div class="cname">' + esc(card.name) + "</div></div>";
+    // No header line: the badge rides on every window row to save vertical space.
+    html += '<div class="card">';
     (card.windows || []).forEach(function (w) {
       var p = Math.max(0, Math.min(100, w.percent));
-      html += '<div class="win"><span class="k">' + esc(kindLabel(w.kind)) + "</span>" +
+      html += '<div class="win">' + badgeHtml(card.badge) + '<span class="k">' + esc(kindLabel(w.kind)) + "</span>" +
         '<div class="track"><span class="fill" style="width: ' + p + "%; background: " + barColor(w.percent) + '"></span></div>' +
         '<span class="pct">' + Math.round(w.percent) + "%</span></div>";
     });

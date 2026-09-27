@@ -3,7 +3,7 @@
   "id": "com.manapoint.usage",
   "name": "Manapoint Usage",
   "description": "Show Manapoint AI subscription usage on your LCD. Polls the Manapoint local API on loopback.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "preview_icon": "resources/icon.svg",
   "min_framework_version": "1.0.0",
   "min_app_version": "5.47",
