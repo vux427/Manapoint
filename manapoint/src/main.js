@@ -57,8 +57,13 @@ async function loadFixture() {
   return JSON.parse(text);
 }
 
-/** Cards as the page sees them: the stored ones plus the burn-rate projection. */
-const view = () => trend.annotate(state.cards, state.history, Date.now());
+/** Cards as the page sees them: the stored ones plus the burn-rate projection,
+ * narrowed to the panel's window selection. */
+const view = () => cards.applyVisibility(trend.annotate(state.cards, state.history, Date.now()), state.settings.visibleWindows);
+
+/** Cards as companions see them: the same annotation, never narrowed, so the
+ * keyboard widget (with its own switches) always gets full data. */
+const full = () => trend.annotate(state.cards, state.history, Date.now());
 
 function pushCards() {
   state.app?.push("cards", view());
@@ -171,11 +176,11 @@ const handlers = {
     return true;
   },
   set_alerts: ({ enabled }) => updateSettings((s) => (s.alerts = Boolean(enabled))),
-  set_widget_windows: ({ id, kinds }) =>
+  set_visible_windows: ({ id, kinds }) =>
     updateSettings((s) => {
-      const map = { ...(s.widgetWindows ?? {}) };
+      const map = { ...(s.visibleWindows ?? {}) };
       map[String(id)] = Array.isArray(kinds) ? kinds.filter((k) => typeof k === "string") : [];
-      s.widgetWindows = map;
+      s.visibleWindows = map;
     }),
 
   set_theme: ({ name }) => updateSettings((s) => (s.themeName = String(name))),
@@ -244,9 +249,10 @@ export async function init(app) {
   setSpawner((argv, opts) => app.spawnHidden(argv, opts));
   await ready;
   pushCards();
-  // Read-only loopback feed for companions (the iCUE LCD widget). It serves
-  // whatever the panel shows and never blocks startup when the port is taken.
-  localApi.start(() => ({ cards: view(), settings: state.settings }), env, (m) => console.log(m));
+  // Read-only loopback feed for companions (the iCUE LCD widget): full cards,
+  // never narrowed — the widget has its own switches. Never blocks startup
+  // when the port is taken.
+  localApi.start(() => full(), env, (m) => console.log(m));
 
   const poll = async () => {
     try {

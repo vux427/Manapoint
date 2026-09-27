@@ -108,7 +108,7 @@ never both non-null.
   enabledProviders: ["opencode-go", ...] | null,   // null = all enabled
   providerOrder: ["opencode-go", ...] | null,
   alerts: true,               // notify on crossing 80% / 95%, or a reset after being high
-  widgetWindows: { [providerId]: UsageWindowKind[] } | null,  // null = all visible; keyboard widget only, the panel ignores it
+  visibleWindows: { [providerId]: UsageWindowKind[] } | null,  // null = all visible; panel and tray obey it, the endpoint serves full cards
 }
 ```
 
@@ -138,7 +138,7 @@ const off = tiny.api.on("cards", (cards) => { /* payload is the argument itself 
 | `set_provider_order` | `{ ids }` | `AppSettings` |
 | `set_auto_start` | `{ enabled }` | `{ enabled: bool, error: string | null }` |
 | `set_alerts` | `{ enabled }` | `AppSettings` |
-| `set_widget_windows` | `{ id, kinds: UsageWindowKind[] }` | `AppSettings` |
+| `set_visible_windows` | `{ id, kinds: UsageWindowKind[] }` | `AppSettings` |
 | `get_update` | — | `UpdateInfo | null` |
 | `check_update` | — | `{ available: bool, current, latest, notes? }` |
 | `install_update` | — | `true`; the app then quits and relaunches as the new version |

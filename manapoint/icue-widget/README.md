@@ -16,8 +16,8 @@ icuewidget package .
 1. 開 iCUE → widgets 區 → 按 **+** → 選產生的 `.icuewidget` 檔。
 2. 把 widget 放到你的 LCD 上。
 3. 設定裡可改端點 URL（預設 `http://127.0.0.1:47901/v1/usage`）與更新間隔（15–300 秒，預設 60 秒），
-   也可按每家開關 5H / WEEK / MONTH；Manapoint 設定頁的「鍵盤 Widget 顯示」是同一組開關的另一面，
-   任一邊關掉就隱藏。
+   也可按每家開關 5H / WEEK / MONTH。這些開關只管 LCD；Manapoint 設定頁的「顯示的窗口」只管桌面面板與托盤，
+   兩邊互不影響。
 
 ## 驗證端點
 

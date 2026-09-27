@@ -76,3 +76,26 @@ export function restack(providers, current, lastGood) {
   });
   return { cards, incomplete };
 }
+
+/**
+ * Narrow cards to the panel's per-provider window selection (`visibleWindows`:
+ * provider id → visible kinds; absent means all). Windows hidden this way vanish
+ * from the panel, the tray and nothing else — alerts still read the raw numbers.
+ * A card left with no windows and no note/error is dropped so no bare header
+ * lingers; error and note cards always survive. New objects throughout.
+ */
+export function applyVisibility(cards, visibleWindows) {
+  if (!visibleWindows || typeof visibleWindows !== "object") return cards;
+  const out = [];
+  for (const card of cards) {
+    const narrowed = visibleWindows[card.id];
+    if (!Array.isArray(narrowed)) {
+      out.push(card);
+      continue;
+    }
+    const windows = card.windows.filter((w) => narrowed.includes(w.kind));
+    if (windows.length === 0 && !card.error && !card.note) continue;
+    out.push({ ...card, windows });
+  }
+  return out;
+}

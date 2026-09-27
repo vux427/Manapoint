@@ -22,14 +22,15 @@ describe("settings", () => {
     const s = normalize({ themeName: "魔力", cardsLayout: "Horizontal", panelOpacity: 0.7,
       enabledProviders: ["codex"], providerOrder: ["codex", "grok"] });
     assert.deepEqual(s, { themeName: "魔力", cardsLayout: "Horizontal", panelOpacity: 0.7,
-      enabledProviders: ["codex"], providerOrder: ["codex", "grok"], alerts: true, widgetWindows: null });
+      enabledProviders: ["codex"], providerOrder: ["codex", "grok"], alerts: true, visibleWindows: null });
     assert.equal(normalize({ alerts: false }).alerts, false);
   });
 
-  it("keeps per-provider widget windows, dropping unknown kinds", () => {
-    assert.deepEqual(normalize({ widgetWindows: { codex: ["Weekly", "Daily"] } }).widgetWindows, { codex: ["Weekly"] });
-    assert.deepEqual(normalize({ widgetWindows: { codex: "Weekly" } }).widgetWindows, { codex: ["Rolling", "Weekly", "Monthly"] });
-    assert.equal(normalize({}).widgetWindows, null);
+  it("keeps per-provider visible windows, dropping unknown kinds", () => {
+    assert.deepEqual(normalize({ visibleWindows: { codex: ["Weekly", "Daily"] } }).visibleWindows, { codex: ["Weekly"] });
+    assert.deepEqual(normalize({ visibleWindows: { codex: "Weekly" } }).visibleWindows, { codex: ["Rolling", "Weekly", "Monthly"] });
+    assert.deepEqual(normalize({ widgetWindows: { codex: ["Weekly"] } }).visibleWindows, { codex: ["Weekly"] });
+    assert.equal(normalize({}).visibleWindows, null);
   });
 });
 
@@ -88,6 +89,21 @@ describe("cards", () => {
     assert.deepEqual(out.map((c) => c.id), ["b", "a"]);
     assert.equal(out[1].windows[0].percent, 5);
     assert.equal(incomplete, true);
+  });
+
+  it("applyVisibility narrows windows and drops emptied healthy cards", () => {
+    const full = [
+      { id: "a", name: "A", windows: [{ kind: "Rolling", percent: 1 }, { kind: "Weekly", percent: 2 }], note: null, error: null },
+      { id: "b", name: "B", windows: [{ kind: "Weekly", percent: 3 }], note: null, error: null },
+      { id: "c", name: "C", windows: [], note: null, error: "壞了" },
+    ];
+    assert.deepEqual(cards.applyVisibility(full, null), full);
+    assert.deepEqual(cards.applyVisibility(full, {}), full);
+    const out = cards.applyVisibility(full, { a: ["Weekly"], b: [] });
+    assert.deepEqual(out.map((c) => c.id), ["a", "c"]);
+    assert.deepEqual(out[0].windows.map((w) => w.kind), ["Weekly"]);
+    // The stored cards are untouched.
+    assert.equal(full[0].windows.length, 2);
   });
 });
 

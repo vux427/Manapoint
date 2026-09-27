@@ -19,7 +19,7 @@ const card = {
 
 describe("payload", () => {
   it("strips cards to what a widget needs, with a timestamp", () => {
-    const p = payload([card], null, Date.UTC(2026, 8, 20));
+    const p = payload([card], Date.UTC(2026, 8, 20));
     assert.equal(p.app, "manapoint");
     assert.equal(p.version, 1);
     assert.equal(p.updatedAt, "2026-09-20T00:00:00.000Z");
@@ -31,19 +31,11 @@ describe("payload", () => {
         note: null,
         error: null,
         windows: [
-          { kind: "Rolling", percent: 10, resetsAt: null, visible: true },
-          { kind: "Weekly", percent: 82.4, resetsAt: "2026-11-02T00:00:00Z", visible: true },
+          { kind: "Rolling", percent: 10, resetsAt: null },
+          { kind: "Weekly", percent: 82.4, resetsAt: "2026-11-02T00:00:00Z" },
         ],
       },
     ]);
-  });
-
-  it("flags windows hidden by the widget settings", () => {
-    const settings = { widgetWindows: { codex: ["Weekly"] } };
-    const [out] = payload([card], settings).cards;
-    assert.deepEqual(out.windows.map((w) => w.visible), [false, true]);
-    const untouched = payload([card], { widgetWindows: {} }).cards[0];
-    assert.ok(untouched.windows.every((w) => w.visible));
   });
 
   it("keeps notes and errors, tolerates missing fields", () => {

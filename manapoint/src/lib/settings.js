@@ -10,8 +10,10 @@ export const MAX_OPACITY = 1.0;
 
 export const LAYOUTS = ["Vertical", "Horizontal"];
 
-/** UsageWindow kinds the keyboard widget may show, per provider. */
-export const WIDGET_KINDS = ["Rolling", "Weekly", "Monthly"];
+/** UsageWindow kinds one can hide per provider. The desktop panel and tray obey
+ * this; the keyboard widget has its own switches in iCUE and always gets full
+ * data from the endpoint. */
+export const VISIBLE_KINDS = ["Rolling", "Weekly", "Monthly"];
 
 export function defaults() {
   return {
@@ -21,18 +23,18 @@ export function defaults() {
     enabledProviders: null, // null = never configured, so everything shows
     providerOrder: null, // null = registry order
     alerts: true, // notify when a window crosses 80% / 95%, or resets after being high
-    widgetWindows: null, // null = never configured; per-provider visible kinds for the keyboard widget
+    visibleWindows: null, // null = never configured; per-provider visible kinds for the panel
   };
 }
 
 const idList = (v) => (Array.isArray(v) && v.every((x) => typeof x === "string") ? v : null);
 
 /** Anything but an array means "never narrowed": every kind stays visible. */
-const widgetKinds = (v) => (Array.isArray(v) ? v.filter((x) => WIDGET_KINDS.includes(x)) : [...WIDGET_KINDS]);
+const visibleKinds = (v) => (Array.isArray(v) ? v.filter((x) => VISIBLE_KINDS.includes(x)) : [...VISIBLE_KINDS]);
 
-const widgetWindows = (v) => {
+const visibleWindows = (v) => {
   if (!v || typeof v !== "object" || Array.isArray(v)) return null;
-  return Object.fromEntries(Object.entries(v).map(([id, kinds]) => [id, widgetKinds(kinds)]));
+  return Object.fromEntries(Object.entries(v).map(([id, kinds]) => [id, visibleKinds(kinds)]));
 };
 
 /**
@@ -52,7 +54,8 @@ export function normalize(raw) {
     enabledProviders: idList(raw.enabledProviders),
     providerOrder: idList(raw.providerOrder),
     alerts: typeof raw.alerts === "boolean" ? raw.alerts : d.alerts,
-    widgetWindows: widgetWindows(raw.widgetWindows),
+    // 0.4.2 stored this under widgetWindows; honour it once, then persist the new key.
+    visibleWindows: visibleWindows(raw.visibleWindows ?? raw.widgetWindows),
   };
 }
 

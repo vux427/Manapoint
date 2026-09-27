@@ -290,9 +290,10 @@ async function onProviderToggle(id, enabled) {
   }
 }
 
-// Keyboard-widget window toggles: per provider, one checkbox per window kind.
-// The backend persists the visible set per provider; an absent entry means all
-// visible. The desktop panel never reads this — widget only.
+// Window toggles for the desktop panel and tray: per provider, one checkbox
+// per window kind. The backend persists the visible set per provider; an absent
+// entry means all visible. The keyboard widget is not affected — it filters
+// with its own switches in iCUE.
 const WIDGET_KINDS = [
   { kind: "Rolling", label: "5H" },
   { kind: "Weekly", label: "WEEK" },
@@ -300,7 +301,7 @@ const WIDGET_KINDS = [
 ];
 
 function widgetKinds(id) {
-  const narrowed = appState.settings.widgetWindows?.[id];
+  const narrowed = appState.settings.visibleWindows?.[id];
   return Array.isArray(narrowed) ? narrowed : WIDGET_KINDS.map((k) => k.kind);
 }
 
@@ -345,7 +346,7 @@ async function onWidgetToggle(id) {
     .filter((box) => box.checked)
     .map((box) => box.dataset.kind);
   try {
-    appState.settings = await invoke("set_widget_windows", { id, kinds });
+    appState.settings = await invoke("set_visible_windows", { id, kinds });
     renderWidget();
   } catch (err) {
     showError(messageOf(err));
