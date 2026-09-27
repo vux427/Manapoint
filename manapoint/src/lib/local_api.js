@@ -29,6 +29,7 @@ export function payload(cards, now = Date.now()) {
     cards: (cards ?? []).map((c) => ({
       id: c.id,
       name: c.name,
+      badge: c.badge ?? null,
       note: c.note ?? null,
       error: c.error ?? null,
       windows: (c.windows ?? []).map((w) => ({

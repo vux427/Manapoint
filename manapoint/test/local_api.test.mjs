@@ -8,7 +8,7 @@ import { payload, portFromEnv, route, DEFAULT_PORT } from "../src/lib/local_api.
 const card = {
   id: "codex",
   name: "Codex",
-  badge: { icon: "x" },
+  badge: { icon: "OpenAI", text: null, background: "#000000", foreground: "#FFFFFF" },
   windows: [{ kind: "Weekly", percent: 82.4, resetsAt: "2026-11-02T00:00:00Z", projected: 140 }],
   note: null,
   error: null,
@@ -24,6 +24,7 @@ describe("payload", () => {
       {
         id: "codex",
         name: "Codex",
+        badge: { icon: "OpenAI", text: null, background: "#000000", foreground: "#FFFFFF" },
         note: null,
         error: null,
         windows: [{ kind: "Weekly", percent: 82.4, resetsAt: "2026-11-02T00:00:00Z" }],
@@ -33,7 +34,7 @@ describe("payload", () => {
 
   it("keeps notes and errors, tolerates missing fields", () => {
     const p = payload([{ id: "grok", name: "Grok", error: "壞了" }]);
-    assert.deepEqual(p.cards, [{ id: "grok", name: "Grok", note: null, error: "壞了", windows: [] }]);
+    assert.deepEqual(p.cards, [{ id: "grok", name: "Grok", badge: null, note: null, error: "壞了", windows: [] }]);
     assert.deepEqual(payload(null).cards, []);
   });
 });
