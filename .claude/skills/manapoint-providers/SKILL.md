@@ -5,8 +5,10 @@ description: How Manapoint's usage collectors work and how to add, fix or debug 
 
 # Manapoint collectors
 
-Code: `manapoint/src/providers/*.js` (one collector + one `*_token.js` per OAuth
-login), shared rules in `manapoint/src/lib/`. Endpoint and credential facts per
+Code: `manapoint/src/providers/*.js` — one collector per provider, OAuth refresh
+in a `*_token.js` (Grok uses `xai_token.js`; the opencode console refreshes inside
+`opencode_go.js`; opencode-held vendor logins go through `lib/opencode_logins.js`),
+shared rules in `manapoint/src/lib/`. Endpoint and credential facts per
 vendor live in `docs/providers.md` — update it with every shape change. The
 page-facing shapes are frozen in `manapoint/CONTRACT.md` §1–2.
 
@@ -30,7 +32,9 @@ Rules that keep the panel honest:
 - `notReady` messages are shown verbatim: make them an instruction
   ("請在 opencode 重新登入 xAI"), in Traditional Chinese.
 - 401/403 on the usage call → refresh once and retry before telling the
-  user to log in.
+  user to log in (Claude/Codex CLI routes, Antigravity). Grok and the
+  opencode-held Claude/Codex routes go straight to `notReady`; opencode Go
+  turns 403 into the "no Go plan" note.
 - Error kinds are checked by duck typing (`asCollectError`): txiki can load
   `errors.js` twice under different path spellings, so `instanceof` lies and
   would silently turn NotReady into Failed. 429 → transient. Other statuses → `statusError(status,
@@ -43,19 +47,20 @@ Rules that keep the panel honest:
 | login | file | refresh | write back? |
 |---|---|---|---|
 | Claude Code | `~/.claude/.credentials.json` `claudeAiOauth` | form POST platform.claude.com | yes — only the 3 token fields |
-| Codex | `~/.codex/auth.json` `tokens` + `last_refresh` | JSON POST auth.openai.com (honours `CODEX_*_OVERRIDE` env) | yes — only `tokens`/`last_refresh` |
-| xAI (Grok) | opencode `auth.json` `xai` | form POST auth.x.ai | yes — only the `xai` node |
+| Codex | `~/.codex/auth.json` `tokens` + `last_refresh` | JSON POST auth.openai.com (honours `CODEX_REFRESH_TOKEN_URL_OVERRIDE`, `CODEX_APP_SERVER_LOGIN_CLIENT_ID`) | yes — only `tokens`/`last_refresh` |
+| xAI (Grok) | opencode.db 'xai' rows; auth.json `xai` only when the db has none (legacy) | form POST auth.x.ai | yes — db: merge into the row's value; file: only the `xai` node |
 | Antigravity | keyring `gemini:antigravity`, opencode 'google', plugin file | Google installed-app flow (one public client for all three) | **never** — mint in memory, keyed by refresh token |
-| xAI via opencode | opencode.db 'xai' rows (auth.json `xai` legacy) | form POST auth.x.ai | yes — merge into the row's value |
 | Claude/Codex via opencode | 'anthropic' / 'openai' rows or auth.json nodes | the vendor's own flow (same public client) | yes — `freshToken` |
 | opencode console | opencode.db 'opencode' row | JSON POST {server}/auth/device/token, client `opencode-cli` | yes |
-| opencode Go/Zen keys | auth.json keys, plugin file | none (API keys) | never |
+| opencode Go/Zen keys | auth.json `opencode-go`/`opencode` keys, opencode.db 'opencode' rows of `type:'key'`, plugin file | none (API keys) | never |
 
 Write-back discipline: re-read the file right before writing, merge only
-your fields (unknown siblings survive), write `tmp` then rename. After a failed
-refresh, re-read: if the CLI rotated first, use the winner's token. A local
-expiry is a hint, not a verdict — proactive refresh 5 min early, but an
-expired-looking token still gets one attempt.
+your fields (unknown siblings survive), write `tmp` then rename. Refresh
+proactively 5 min before expiry. On the Claude/Codex CLI routes a local expiry
+is a hint, not a verdict: after a failed refresh, re-read (if the CLI rotated
+first, use the winner's token), else still send the stored token once. xAI
+re-reads only when the refresh is rejected (400/401); Antigravity, `freshToken`
+and the console refresh surface the refresh error to the card.
 
 ## Routes and multiple accounts
 
@@ -80,9 +85,10 @@ Where logins live (verified 2026-09-26 against current opencode):
   the row's value (`lib/opencode_db.js`). Vendor OAuth logins opencode holds:
   `lib/opencode_logins.js` (`opencodeLogins`, `freshToken` with write-back).
 - **opencode console login** (integration 'opencode', device-code OAuth): its
-  usage is NOT on /zen. `GET {server}/api/config` (Bearer access, `x-org-id`)
-  → `provider["opencode-go"].api` = `…/inference/go/openai/v1` and
-  `options.headers` (`x-opencode-org-id`); `options.apiKey` is only the template
+  usage is NOT on /zen. `GET {server}/api/config` (Bearer access; `x-org-id`
+  when the row's metadata has `orgID`) → `config.provider["opencode-go"].api` =
+  `…/inference/go/openai/v1` and its `options.headers` (`x-opencode-org-id`);
+  `options.apiKey` is only the template
   `{env:OPENCODE_CONSOLE_TOKEN}`, i.e. the access token. Usage =
   `GET …/inference/go/v1/usage` with that token and header.
 - Plugins: `~/.config/opencode/opencode-go-accounts.json` (go-multi-auth),
@@ -115,7 +121,16 @@ Screenshot recipe: see the tinyjs-windows skill.
 
 `cd manapoint && node --test test/*.test.mjs` — providers (real-response
 fixtures), tokens (skew, rotation, merge-preserves-siblings), accounts, core
-(settings, order, cards, snapping), plus the UI suites (themes contrast,
-format, settings). Every parser and rule is pure so Node runs it; IO lives only
-in `lib/io.js` / `lib/keyring.js`. Port a Rust-era test when you touch its
-area rather than deleting it.
+(settings, order, cards, snapping), watch (alerts, burn-rate projection, tray
+summary, relaunch helper), local_api (payload, routing, env), main_wiring
+(side-effect-free import, visibility handler), plus the UI suites (themes
+contrast, format, settings).
+
+Every parser and rule is pure so Node runs it; runtime IO stays in `lib/io.js`
+(files, fetch, curl, spawn), `lib/keyring.js` (FFI), `lib/opencode_db.js`
+(sqlite), `lib/local_api.js` `start()`, `lib/relaunch.js` `arm()` and the
+`main.js` wiring.
+
+Rust-era tests survive only in git history: `git show 1aa7ba5^:manapoint-tauri/src-tauri/src/<path>.rs`
+(the `#[cfg(test)]` block). When you touch an area, port the cases `test/` lacks
+rather than dropping them.

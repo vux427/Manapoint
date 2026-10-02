@@ -14,10 +14,12 @@ manapoint/
   CONTRACT.md            <- this file (owner)
   tinyjs.json            <- app manifest (window chrome, activation, version)
   diagnose.js            <- safe-to-paste diagnostics (no secrets printed)
+  icon.png               <- app icon (tinyjs.json "icon")
+  icue-widget/           <- iCUE LCD companion; reads the loopback feed of src/lib/local_api.js
   src/
     main.js              <- backend entry: tiny.api handlers + polling (owner)
-    lib/                 <- backend: errors, io, paths, settings, cache, cards, keyring
-    providers/           <- backend: one collector (+ token module) per provider
+    lib/                 <- backend: pure shared rules, plus the IO modules io, keyring, opencode_db, local_api, relaunch
+    providers/           <- backend: registry.js (ids, badges, order; register providers here), model.js, one collector (+ token module) per vendor
     frontend/            <- the pages; tinyjs serves this directory as file://
       index.html         <- owner: panel DOM skeleton
       panel.js           <- owner: render, window geometry, drag/snap, tray, menus
@@ -27,7 +29,7 @@ manapoint/
       format.js          <- package B
       settings.html/css/js <- package C
       panel.css, panel.preview.html <- package D
-      tray.png           <- tray icon (tray.set needs a real file path)
+      tray.png, tray-warning.png, tray-critical.png <- tray icons by level (tray.set needs a real file path)
   test/                  <- node --test suites for every pure module
 ```
 
@@ -128,7 +130,7 @@ const off = tiny.api.on("cards", (cards) => { /* payload is the argument itself 
 
 | Method | Params | Returns |
 |---|---|---|
-| `get_state` | — | `{ settings: AppSettings, providers: ProviderDescriptor[], autoStart: bool, autoStartSupported: bool, version: string, update: UpdateInfo | null }` |
+| `get_state` | — | `{ settings: AppSettings, providers: ProviderDescriptor[], autoStart: bool, autoStartSupported: bool, version: string | null, update: UpdateInfo | null }` |
 | `get_cards` | — | `CardState[]` (already ordered and filtered by user prefs) |
 | `refresh` | — | `CardState[]` |
 | `set_theme` | `{ name }` | `AppSettings` |
@@ -160,7 +162,7 @@ Window control is **not** part of this API. The panel page drives its own window
 
 | Event | Payload |
 |---|---|
-| `cards` | `CardState[]` — pushed after each 5-minute poll and on every restack |
+| `cards` | `CardState[]` — pushed at startup, after each 5-minute poll, on every restack and after `set_visible_windows`; `refresh` returns its cards without pushing |
 | `settings` | `AppSettings` — pushed when settings change in any window |
 | `update` | `UpdateInfo` — pushed when a newer release is found |
 
@@ -196,14 +198,14 @@ Every theme object has these fields — **all required, names must not change**:
   monospace: false,
   segmentRadius: 2,          // px
   brackets: false,
-  panelWidth: 252,           // px, panel width in vertical layout
+  panelWidth: 252,           // px, vertical width of the compact (text) theme only; meter themes use fixed CSS widths (5.2)
   segmentCells: 10,
   segmentWidth: 7            // px
 }
 ```
 
 The five themes, in order: 石墨, 魔力, 終端, 精簡, 紙白. Values are frozen — the contrast
-test in `src/frontend/themes.test.mjs` is the guard, so recompute a colour rather than lower a threshold.
+test in `test/themes.test.mjs` is the guard, so recompute a colour rather than lower a threshold.
 
 ---
 
@@ -223,7 +225,7 @@ Pure functions exported from `src/frontend/format.js`. No side effects, no DOM.
 
 | `runOutText(window, now)` | `null` without `runsOutAt`; else `{ short: "≈{resetsInText(runsOutAt)}", title: sentence with both countdowns }` |
 | `trayLevel(cards)` | highest percent of any window: `>= CRITICAL_AT` -> `"critical"`, `>= WARNING_AT` -> `"warning"`, else `"good"`; `null` with no windows |
-| `trayTooltip(cards)` | one `"{name} {percentText(highest)}"` line per card with windows, at most 127 chars |
+| `trayTooltip(cards)` | one `"{name} {percentText(highest)}"` line per card with windows, joined by `\n`; `"Manapoint"` when no card has windows; longer than 127 chars → first 126 + `"…"` |
 
 `resetsInText`'s `now` is a `Date`; when omitted it defaults to `new Date()`.
 
@@ -249,7 +251,7 @@ Package D writes `src/frontend/panel.css` only — **do not touch index.html or 
       </header>
       <p class="card__error">連線失敗：503</p>       <!-- omitted when absent -->
       <p class="card__note">此帳號沒有訂閱額度</p>    <!-- omitted when absent -->
-      <ul class="meters">
+      <ul class="meters">                            <!-- omitted when the card has no windows -->
         <li class="meter-group">work</li>   <!-- multi-account cards only: one caption per account, before its meters -->
         <li class="meter" data-kind="Rolling">
           <span class="meter__label">5H</span>
@@ -261,7 +263,7 @@ Package D writes `src/frontend/panel.css` only — **do not touch index.html or 
             <i class="cell is-lit"></i><i class="cell"></i>...
             <span class="meter__bracket">]</span>
           </div>
-          <span class="meter__value"><b class="meter__alert">!</b>35%</span>
+          <span class="meter__value"><b class="meter__alert">!</b>35%</span>  <!-- meter__alert omitted when alertText is "" -->
           <span class="meter__reset">4h</span>
         </li>
       </ul>
@@ -297,27 +299,22 @@ Package D writes `src/frontend/panel.css` only — **do not touch index.html or 
 ```
 
 Projection is hover-only: when `runsOutAt` is set, the meter's `title` carries the
-`runOutText` sentence. There is no inline mark — no ghost bar, no projected
-cells, no countdown swap, no `is-runout` class.
+`runOutText` sentence; the meter itself renders exactly as it would without one.
 
 Multi-account dividers are CSS-only hairlines: `.meter-group:not(:first-child)`
 in meter themes, `.card--compact.is-account-sequel` in vertical compact
 (horizontal compact already separates its segments). No extra DOM.
 
-Per-meter fill colour is set on `.meter` as `--meter-fill`.
+Per-meter fill colour is set as `--meter-fill` on `.meter` and on each filled `.compact__slot`.
 `.badge` carries `--badge-bg` and `--badge-fg`.
 
-### 5.2 Layout rules (**these are the two defects this port must fix**)
+### 5.2 Layout rules
 
 | `data-layout` | `data-meter` | Layout |
 |---|---|---|
-| `vertical` | any | Cards stack top to bottom. Panel width fixed at `--panel-width` |
+| `vertical` | any | Cards stack top to bottom. Panel width fixed: `--panel-width` for `text`, 224px for meter themes (236px with `data-mono="true"`) |
 | `horizontal` | `text` | **All cards on ONE single row**: `#cards` is a row, each `.card--compact` is one segment of that row, with a divider between segments. Panel width follows content |
-| `horizontal` | `smooth` / `segmented` | **One column per provider** side by side: `#cards` is a row, each `.card` is a `--panel-width` wide column with the header on top and meters stacked below. Panel width follows content |
-
-The C# version's defects were: the compact theme was force-reverted to vertical in
-horizontal mode (i.e. it had no horizontal layout at all), and the other themes' horizontal
-mode just placed vertical cards side by side without designing for horizontal. Fix both in CSS.
+| `horizontal` | `smooth` / `segmented` | **One column per provider** side by side: `#cards` is a row, each `.card` is a fixed 224px column (236px for monospace `segmented`) with the header on top and meters stacked below. Panel width follows content |
 
 Panel chrome: 10px radius, 1px border (`--border`), padding `13px 11px`,
 background `--panel` at `--panel-alpha` opacity (`color-mix` or rgba, either is fine).
