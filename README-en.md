@@ -83,6 +83,10 @@ The other themes give each provider its own column, header on top:
 - Failures explain themselves and keep the last known numbers instead of going blank
 - Usage alerts: a system notification when any window crosses 80% or 95%, or resets
   after being high (can be turned off in settings)
+- Usage history: saves each service and account's quota every 5 minutes by default
+  (configurable from 1 to 1440 minutes), retaining only the last 7 days. View and
+  filter remaining quota from the panel or tray context menu; recording runs while
+  the app is open.
 - Burn-rate projection: from the last day's samples, hovering a meter shows when it
   would empty at this pace, if before its reset (reference only)
 - Keyboard LCD: show usage on an iCUE LCD keyboard (VANGUARD 96 etc.), see

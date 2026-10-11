@@ -369,6 +369,7 @@ const updateItems = () => (update ? [{ id: "update", label: `更新到 ${update.
 const panelMenu = () => [
   ...updateItems(),
   { id: "refresh", label: "重新整理" },
+  { id: "history", label: "用量歷史…" },
   { separator: true },
   { id: "minimize", label: "最小化" },
   { id: "settings", label: "設定…" },
@@ -379,6 +380,7 @@ const panelMenu = () => [
 const trayMenu = () => [
   ...updateItems(),
   { id: "show", label: "顯示面板" },
+  { id: "history", label: "用量歷史…" },
   { id: "settings", label: "設定…" },
   { separator: true },
   { id: "quit", label: "結束" },
@@ -436,6 +438,9 @@ function openSettings() {
 
 async function handleMenu(id) {
   switch (id) {
+    case "history":
+      tiny.win.open("history", { page: "history.html", title: "Manapoint 用量歷史", size: "920x640" });
+      break;
     case "refresh":
       cards = await call("refresh");
       render();

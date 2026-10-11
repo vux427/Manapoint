@@ -35,6 +35,13 @@ export async function writeText(path, text) {
   await rt().writeFile(path, enc.encode(text));
 }
 
+/** Preserve the previous history if a write is interrupted. */
+export async function writeAtomicText(path, text) {
+  const tmp = path + ".tmp";
+  await writeText(tmp, text);
+  await rt().rename(tmp, path);
+}
+
 /** Delete a file if it is there; a missing one is already the goal. */
 export async function removeFile(path) {
   await rt().remove(path).catch(() => {});

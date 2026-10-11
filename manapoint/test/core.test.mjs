@@ -22,7 +22,7 @@ describe("settings", () => {
     const s = normalize({ themeName: "魔力", cardsLayout: "Horizontal", panelOpacity: 0.7,
       enabledProviders: ["codex"], providerOrder: ["codex", "grok"] });
     assert.deepEqual(s, { themeName: "魔力", cardsLayout: "Horizontal", panelOpacity: 0.7,
-      enabledProviders: ["codex"], providerOrder: ["codex", "grok"], alerts: true, visibleWindows: null });
+      enabledProviders: ["codex"], providerOrder: ["codex", "grok"], alerts: true, visibleWindows: null, historyIntervalMinutes: 5 });
     assert.equal(normalize({ alerts: false }).alerts, false);
   });
 

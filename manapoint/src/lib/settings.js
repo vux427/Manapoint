@@ -23,6 +23,7 @@ export function defaults() {
     enabledProviders: null, // null = never configured, so everything shows
     providerOrder: null, // null = registry order
     alerts: true, // notify when a window crosses 80% / 95%, or resets after being high
+    historyIntervalMinutes: 5,
     visibleWindows: null, // null = never configured; per-provider visible kinds for the panel
   };
 }
@@ -54,6 +55,8 @@ export function normalize(raw) {
     enabledProviders: idList(raw.enabledProviders),
     providerOrder: idList(raw.providerOrder),
     alerts: typeof raw.alerts === "boolean" ? raw.alerts : d.alerts,
+    historyIntervalMinutes: Number.isInteger(raw.historyIntervalMinutes) && raw.historyIntervalMinutes >= 1 && raw.historyIntervalMinutes <= 1440
+      ? raw.historyIntervalMinutes : d.historyIntervalMinutes,
     // 0.4.2 stored this under widgetWindows; honour it once, then persist the new key.
     visibleWindows: visibleWindows(raw.visibleWindows ?? raw.widgetWindows),
   };

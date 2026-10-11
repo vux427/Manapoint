@@ -289,3 +289,5 @@ button:disabled {
   align-items: center;
   gap: 10px;
 }
+
+#history-interval { width: 6em; font: inherit; color: inherit; background: #232730; border: 1px solid #343a46; border-radius: 6px; padding: 3px 6px; }

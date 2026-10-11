@@ -64,6 +64,7 @@ function renderAll() {
   renderProviders();
   renderAutoStart();
   renderAlerts();
+  byId("history-interval").value = appState.settings.historyIntervalMinutes;
   renderVersion();
 }
 
@@ -507,6 +508,14 @@ function applyRemoteSettings(next) {
 }
 
 function bindControls() {
+  byId("history-interval").addEventListener("change", async (event) => {
+    try {
+      appState.settings = await invoke("set_history_interval", { minutes: Number(event.target.value) });
+    } catch (err) {
+      showError(messageOf(err));
+    }
+    event.target.value = appState.settings.historyIntervalMinutes;
+  });
   byId("layout-vertical").addEventListener("change", onLayoutChange);
   byId("layout-horizontal").addEventListener("change", onLayoutChange);
   byId("opacity").addEventListener("input", onOpacityInput);

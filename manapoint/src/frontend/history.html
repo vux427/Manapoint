@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manapoint 用量歷史</title>
+  <link rel="stylesheet" href="./settings.css" />
+  <link rel="stylesheet" href="./history.css" />
+</head>
+<body>
+  <main>
+    <h1>用量歷史</h1>
+    <p id="error" class="error" role="alert" hidden></p>
+    <p id="summary" class="hint" role="status"></p>
+    <div class="filters">
+      <label>服務 <select id="provider"><option value="">全部服務</option></select></label>
+      <label>時間 <select id="period"><option value="7">最近 7 天</option><option value="1">最近 24 小時</option></select></label>
+      <button id="reload" type="button">重新載入</button>
+    </div>
+    <p class="hint">顯示儲存當下的剩餘額度；附註標示舊資料或取得失敗。時間使用本機時區。</p>
+    <p id="empty" hidden>尚無符合條件的紀錄。程式啟動及定時儲存後會顯示於此。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">儲存時間</th><th scope="col">服務</th><th scope="col">帳號</th><th scope="col">窗口</th><th scope="col">剩餘</th><th scope="col">重置時間</th><th scope="col">狀態</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <nav aria-label="歷史分頁">
+      <button id="previous" type="button">上一頁</button>
+      <span id="page" role="status"></span>
+      <button id="next" type="button">下一頁</button>
+    </nav>
+  </main>
+  <script type="module" src="./history.js"></script>
+</body>
+</html>

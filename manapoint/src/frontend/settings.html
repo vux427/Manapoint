@@ -49,6 +49,12 @@
       <label><input type="checkbox" id="alerts" />用量超過 80%、95% 或重置時通知我</label>
     </section>
 
+    <section id="section-history" aria-labelledby="heading-history">
+      <h2 id="heading-history">用量歷史</h2>
+      <label>每 <input type="number" id="history-interval" min="1" max="1440" step="1" required /> 分鐘儲存一次</label>
+      <p class="hint">預設 5 分鐘，只保留最近 7 天。可從右鍵選單查閱；Manapoint 執行時才會記錄已啟用的服務。</p>
+    </section>
+
     <section id="section-version" aria-labelledby="heading-version">
       <h2 id="heading-version">版本</h2>
       <div class="version-row">

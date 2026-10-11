@@ -1,0 +1,11 @@
+body { width: auto; }
+h1 { font-size: 20px; margin: 0 0 12px; }
+.filters { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0; }
+select, input[type="number"] { color: #e4e9f0; background: #232730; border: 1px solid #343a46; border-radius: 6px; padding: 4px; font: inherit; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { padding: 8px; border-bottom: 1px solid #343a46; text-align: left; }
+th { color: #c8d0da; white-space: nowrap; }
+td:nth-child(5) { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td:last-child { min-width: 100px; overflow-wrap: anywhere; }
+nav { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 16px; }

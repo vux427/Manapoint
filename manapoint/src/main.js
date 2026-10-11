@@ -12,6 +12,7 @@ import * as localApi from "./lib/local_api.js";
 import * as relaunch from "./lib/relaunch.js";
 import * as settingsFile from "./lib/settings.js";
 import * as trend from "./lib/trend.js";
+import * as usageHistory from "./lib/usage_history.js";
 import * as registry from "./providers/registry.js";
 
 /** Matches the token refresh skew, so a token that expires between polls is renewed
@@ -30,6 +31,7 @@ const state = {
   fixture: null,
   /** Recent percent samples per window, for the burn-rate projection. */
   history: {},
+  usageHistory: [],
   /** { current, latest, notes } once a newer release is known, else null. */
   update: null,
 };
@@ -40,6 +42,7 @@ const ready = (async () => {
   state.settings = await settingsFile.load();
   state.lastGood = await cache.load();
   state.history = await trend.load();
+  state.usageHistory = await usageHistory.load();
   state.cards = cards.seed(registry.enabled(state.settings), state.lastGood);
   state.fixture = await loadFixture();
   if (state.fixture) state.cards = state.fixture;
@@ -111,6 +114,48 @@ async function kickRefresh() {
   pushCards();
 }
 
+let historyTimer = null;
+let historyRound = null;
+let archiveQueue = Promise.resolve();
+
+/** Serialize pruning and recording to avoid overwriting a newly saved sample. */
+function editArchive(operation) {
+  const result = archiveQueue.then(operation);
+  archiveQueue = result.catch(() => {});
+  return result;
+}
+
+/** Join concurrent requests so changing the interval never duplicates a sample. */
+function recordUsage() {
+  historyRound ??= (async () => {
+    await refresh();
+    pushCards();
+    const sample = usageHistory.snapshot(state.cards);
+    await editArchive(async () => {
+      const entries = usageHistory.prune(state.usageHistory);
+      entries.push(sample);
+      await usageHistory.save(entries);
+      state.usageHistory = entries;
+      state.app?.push("usage_history", { timestamp: sample.timestamp });
+    });
+  })().finally(() => { historyRound = null; });
+  return historyRound;
+}
+
+function scheduleHistory() {
+  clearTimeout(historyTimer);
+  if (!state.app) return;
+  historyTimer = setTimeout(async () => {
+    try {
+      await recordUsage();
+    } catch (err) {
+      console.error("[manapoint] usage history not saved:", err?.message ?? err);
+    } finally {
+      scheduleHistory();
+    }
+  }, state.settings.historyIntervalMinutes * 60_000);
+}
+
 /** Mutate, persist, and hand the result to every window in one step — the settings
  * window and the panel must never disagree about what is stored. */
 async function updateSettings(edit) {
@@ -153,6 +198,22 @@ const handlers = {
 
   get_cards: () => view(),
   refresh: () => refresh().then(view),
+  get_usage_history: () => editArchive(async () => {
+    const entries = usageHistory.prune(state.usageHistory);
+    if (entries.length !== state.usageHistory.length) {
+      await usageHistory.save(entries);
+      state.usageHistory = entries;
+    }
+    return entries;
+  }),
+  async set_history_interval({ minutes }) {
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
+      throw new Error("儲存間隔請輸入 1 至 1440 分鐘的整數。");
+    }
+    const updated = await updateSettings((s) => (s.historyIntervalMinutes = minutes));
+    scheduleHistory();
+    return updated;
+  },
 
   get_update: () => state.update,
   /** A manual check from the settings page; a hit is announced like the daily one. */
@@ -259,6 +320,13 @@ export async function init(app) {
   // when the port is taken.
   localApi.start(() => full(), env, (m) => console.log(m));
 
+  try {
+    await recordUsage();
+  } catch (err) {
+    console.error("[manapoint] usage history not saved:", err?.message ?? err);
+  }
+  scheduleHistory();
+
   const poll = async () => {
     try {
       await kickRefresh();
@@ -267,5 +335,5 @@ export async function init(app) {
     }
     setTimeout(poll, REFRESH_INTERVAL_MS);
   };
-  poll();
+  setTimeout(poll, REFRESH_INTERVAL_MS);
 }
