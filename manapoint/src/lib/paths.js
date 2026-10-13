@@ -25,3 +25,11 @@ export function opencodeAuth() {
 
 export const claudeCredentials = () => home() + "/.claude/.credentials.json";
 export const codexAuth = () => home() + "/.codex/auth.json";
+
+/** Muse uses the file credential backend on Windows and Linux. */
+export function museAuth() {
+  const override = env("MUSE_AUTH_PATH");
+  if (override && override.trim()) return override.trim().replace(/\\/g, "/");
+  const xdg = env("XDG_CONFIG_HOME");
+  return (xdg && xdg.trim() ? norm(xdg) : home() + "/.config") + "/muse/auth.json";
+}

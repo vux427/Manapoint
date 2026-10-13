@@ -7,7 +7,7 @@
 // each provider's result or error. No token, key or secret is ever printed.
 
 import { readText, exists } from "./src/lib/io.js";
-import { claudeCredentials, codexAuth, opencodeAuth } from "./src/lib/paths.js";
+import { claudeCredentials, codexAuth, museAuth, opencodeAuth } from "./src/lib/paths.js";
 import { readGeneric } from "./src/lib/keyring.js";
 import * as registry from "./src/providers/registry.js";
 
@@ -54,6 +54,7 @@ await file("Claude .credentials.json", claudeCredentials(), (root) => {
   if (o) console.log("  " + expiry("claudeAiOauth.expiresAt", o.expiresAt ?? o.expires_at));
 });
 await file("Codex auth.json", codexAuth());
+await file("Muse Code auth.json", museAuth());
 
 console.log("\n## Antigravity keyring (gemini:antigravity)");
 try {

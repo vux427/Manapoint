@@ -81,7 +81,7 @@ reset. Both are absent when there is no rising trend or no `resetsAt`.
 render `badge.text` instead.
 
 Provider ids are fixed: `opencode-go`, `claude-code`, `codex`, `grok`,
-`antigravity-gemini`, `antigravity-3p`. The two Antigravity ids are one subscription
+`antigravity-gemini`, `antigravity-3p`, `muse-code`. The two Antigravity ids are one subscription
 with two independent quota pools, so they are two cards sharing one badge.
 
 ### 1.4 CardState

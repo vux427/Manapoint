@@ -4,6 +4,7 @@ import * as antigravity from "./antigravity.js";
 import * as claude from "./claude.js";
 import * as codex from "./codex.js";
 import * as grok from "./grok.js";
+import * as muse from "./muse.js";
 import * as opencodeGo from "./opencode_go.js";
 
 /** Google blue, from the Antigravity mark. */
@@ -60,6 +61,13 @@ const PROVIDERS = [
     credentialHint: "Antigravity 登入狀態",
     badge: badge("Antigravity", GOOGLE_BLUE, ON_DARK),
     collect: () => antigravity.collect(antigravity.POOLS.thirdParty),
+  },
+  {
+    id: "muse-code",
+    name: muse.PROVIDER_NAME,
+    credentialHint: "Muse Code CLI 登入狀態（muse login）",
+    badge: { icon: null, text: "M", background: "#0866FF", foreground: ON_DARK },
+    collect: muse.collect,
   },
 ];
 

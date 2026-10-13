@@ -5,10 +5,10 @@
 
 ![Manapoint](docs/images/screenshot.webp)
 
-Five AI subscriptions, one floating panel.
+Six AI subscriptions, one floating panel.
 
 Manapoint is a desktop widget built with [tinyjs](https://tinyjs.app) — JavaScript on both
-sides — that keeps opencode Go, Claude Code, Codex, Grok and Antigravity usage windows
+sides — that keeps opencode Go, Claude Code, Codex, Grok, Antigravity and Meta Muse Code usage windows
 (5-hour / weekly / monthly) on screen. Right-click to refresh, open settings, or quit.
 
 ## Download
@@ -68,7 +68,8 @@ The other themes give each provider its own column, header on top:
 
 ## Features
 
-- Reads the login state your CLIs already have. No API key required, expired tokens are
+- Muse Code: reads the local `muse login` credential and shows five-hour and weekly quota. Enable it in settings; missing quota and expired logins get explicit messages.
+- Reads the login state your CLIs already have. No API key required, supported OAuth tokens are
   refreshed automatically, and no credential is ever written out
 - Five panel themes: Graphite, Vitals, Terminal, Compact, Paper
 - Vertical and horizontal arrangements, each theme designed for both (the Compact theme

@@ -39,7 +39,7 @@ describe("provider order", () => {
 
   it("puts unlisted providers last and skips unknown ids", () => {
     assert.deepEqual(ids(registry.inOrder(["grok", "codex"])),
-      ["grok", "codex", "opencode-go", "claude-code", "antigravity-gemini", "antigravity-3p"]);
+      ["grok", "codex", "opencode-go", "claude-code", "antigravity-gemini", "antigravity-3p", "muse-code"]);
     const order = registry.inOrder(["ghost", "codex"]);
     assert.equal(order[0].id, "codex");
     assert.equal(order.length, registry.all().length);

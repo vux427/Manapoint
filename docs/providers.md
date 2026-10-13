@@ -1,6 +1,6 @@
 # Provider 取數對照表
 
-五家 AI 訂閱的用量來源，共六張卡（Antigravity 的兩個額度池各一張）。
+六家 AI 訂閱的用量來源，共七張卡（Antigravity 的兩個額度池各一張）。
 全部讀本機既有的登入憑證，不需要另外申請 API key，不需要帳號密碼。
 所有 endpoint 皆為非公開介面，可能隨對方改版而失效。
 
@@ -148,6 +148,44 @@ Opencode 聊天走的是同一個 token 的 chat 通道，不受此影響。
 
 注意：`/v1/user` 回應含 email、姓名、userId 等個資，本專案不呼叫該端點。
 
+## Muse Code（Meta）
+
+介面與回應形狀對照 [CodexBar 的 Muse provider](https://github.com/steipete/CodexBar/blob/main/Sources/CodexBarCore/Resources/Plugins/muse.ts)（2026-10-14）；尚未以真實訂閱帳號實機驗證。
+Windows 憑證位置對照 [Meta 官方 SDK issue #38](https://github.com/meta-models/muse-code-sdk/issues/38)：Muse Code 1.4.1 起恢復使用檔案儲存登入。
+
+- 憑證：`~/.config/muse/auth.json` → `providers.meta.access_token`，必須是非空的 `dca:` 裝置登入 token（`muse login` 產生）
+- 路徑：`MUSE_AUTH_PATH` 優先，其次 `$XDG_CONFIG_HOME/muse/auth.json`，預設上述位置（Windows 的 `~` 為 `%USERPROFILE%`）
+- `api_key`、`META_API_KEY` 與 `LLM_`／`LLM|` 推論 key 無法查詢此訂閱用量，不代替裝置登入 token
+- 請求：`POST https://api.meta.ai/muse-code/key`，JSON body 為 `{}`
+- 認證：`Authorization: Bearer <dca token>`、`x-api-version: 1.0.0`、`User-Agent: Manapoint`
+- 只呼叫登入／額度介面，不發模型推論請求；回應中的推論 key、email、方案名稱與付款資訊全部丟棄，不存入快取、歷史或診斷錯誤
+- token 不換發、不寫回。每次輪詢重讀 CLI 登入檔；401/403 提示執行 `muse login`，保留上次成功的數字。沒有已知的裝置 token 換發介面
+
+回應形狀（合成示例，已省略憑證與帳號欄位）：
+
+```json
+{
+  "is_subs_active": true,
+  "require_payment": false,
+  "subs_usage": {
+    "window": { "window_duration_mins": 300, "used_percent": 12.5, "resets_at": 1791946800 },
+    "weekly": { "used_percent": 63, "resets_at": 1792454400 }
+  }
+}
+```
+
+`window` 為 5 小時池、`weekly` 為每週池；`used_percent` 是已用百分比，`resets_at` 為 Unix 秒。
+百分比限制於 0–100；重置時間缺少或無效時保留百分比、不顯示倒數。
+短期窗口長度必須是 300 分鐘，以免其他長度被現有面板誤標為 5H。
+
+- `require_payment: true`：提示至 dev.meta.ai 完成付款設定
+- `is_subs_active: false`：顯示沒有有效訂閱，不畫 0% bar
+- 已訂閱但 `subs_usage` 缺少或為 null：顯示「此登入回應未提供用量」。Meta 在短期窗口閒置時可能省略整份用量，即使每週已有消耗，也不能據此推算為 0%
+- `subs_usage` 存在但窗口或百分比格式不符：回應格式錯誤，不合成數字
+
+本版本讀取 Windows／Linux 的 CLI 檔案登入，不讀 macOS Keychain，也不讀瀏覽器 cookie 或自動挑選 dev.meta.ai 的 team。
+尚未自訂啟用清單時預設顯示；既有使用者已設定清單時，請到設定頁勾選 Muse Code。
+
 ## Antigravity
 
 已驗證（2026-09-09）。Antigravity CLI 的執行檔是 `agy`。
@@ -268,6 +306,7 @@ Antigravity 的 endpoint 與 OAuth client 出處為 MIT 授權的
 | Claude Code | `~/.claude/.credentials.json`；opencode 的 `anthropic` 登入（opencode.db 或 auth.json） |
 | Codex | `~/.codex/auth.json`；opencode 的 `openai` 登入（帳號 id 取自登入或 JWT） |
 | Grok | opencode.db 的 `xai` 列；auth.json `xai`（舊版） |
+| Muse Code | Muse CLI auth.json 的 `providers.meta.access_token`（Windows／Linux 檔案登入） |
 | Antigravity | agy keyring；opencode 的 `google` 登入；opencode-antigravity-multi-auth 外掛 |
 
 opencode 代存的 OAuth 登入換發後寫回原處（opencode.db 以交易合併該列 `value`；auth.json 只動該節點），
@@ -292,8 +331,9 @@ Manapoint 只讀取使用者自己機器上、由各家官方 CLI 寫下的登�
   該 CLI 自己管理的同一個憑證檔，並處理 refresh token 輪換與並發寫入。
   目前 Claude Code、Codex、opencode xAI 三家皆已實作；
   換發失敗時保留上次數字並顯示指示。
-  Antigravity 是唯一例外：它的憑證在 OS keyring 而非檔案，換發到的 token
+  Antigravity 的憑證在 OS keyring 而非檔案，換發到的 token
   只留在記憶體，不寫回 keyring（理由見上）。
+  Muse Code 沒有已知的裝置 token 換發介面，登入失效時提示使用者執行 `muse login`。
 - **不要求 API key 或密碼。**
 - **不寫出 token。** 快取檔與記錄檔都不含憑證。
 

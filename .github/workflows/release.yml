@@ -26,7 +26,9 @@ jobs:
           & "$env:RUNNER_TEMP/tinyjs-install.ps1"
       - name: Test, build and package
         shell: pwsh
-        run: ./scripts/release.ps1 -NotesFile docs/releases/v0.4.6.md
+        run: |
+          $version = (Get-Content manapoint/tinyjs.json -Raw | ConvertFrom-Json).version
+          ./scripts/release.ps1 -NotesFile "docs/releases/v$version.md"
       - name: Upload and publish
         shell: pwsh
         env:
@@ -37,12 +39,14 @@ jobs:
           $version = $manifest.version
           $tag = "v$version"
           $zip = "Manapoint-$version-win.zip"
-          $notes = (Get-Content docs/releases/v0.4.6.md -Raw).Trim()
+          $notes = (Get-Content "docs/releases/$tag.md" -Raw -Encoding UTF8).Trim()
+          $heading = ($notes -split "`n")[0].Trim()
+          $title = if ($heading.StartsWith('# ')) { "$tag — $($heading.Substring(2))" } else { $tag }
           $notes += "`n`nSHA-256 ($zip): ``$($manifest.win.sha256)```n"
           [IO.File]::WriteAllText("dist/release-notes.md", $notes, [Text.UTF8Encoding]::new($false))
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --repo $env:GITHUB_REPOSITORY --draft --target $env:GITHUB_SHA --title "$tag — 用量歷史" --notes-file dist/release-notes.md
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --draft --target $env:GITHUB_SHA --title $title --notes-file dist/release-notes.md
             if ($LASTEXITCODE -ne 0) { throw 'Release creation failed' }
           }
           gh release upload $tag "dist/$zip" dist/manifest.json --repo $env:GITHUB_REPOSITORY --clobber
