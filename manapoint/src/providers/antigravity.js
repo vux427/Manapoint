@@ -1,15 +1,17 @@
-// Antigravity's two shared quota pools.
+// Antigravity's quota pools, grouped into Gemini and Claude/GPT cards.
 //
 // One request answers for both cards: `retrieveUserQuotaSummary` returns four buckets
-// in two groups — Gemini models share a 5-hour and a weekly limit, Claude/GPT models
-// share another pair. Each pool gets its own card, and the response is fetched once
+// in model groups — Gemini and Claude/GPT each have shared limits, while Argon
+// has a separate balance. Gemini and Argon share a card. The response is fetched once
 // and shared between them (see SUMMARY_TTL_MS). Every login on the machine is read —
 // `agy`'s own plus any from the opencode-antigravity-multi-auth plugin — and each
 // shows as its own group of bars on both cards. The response carries no account
-// identifiers, only the buckets below.
+// identifiers, only quota groups and buckets.
 //
 // Endpoint and OAuth client verified against the MIT-licensed lamchun1110/UsageDeck
 // (src-tauri/src/providers/antigravity) and confirmed live on 2026-09-09.
+// Additional summary shapes are documented by steipete/CodexBar's
+// AntigravityQuotaSummaryParser and its quota-summary tests.
 
 import { failed, parseJson, statusError, transient } from "../lib/errors.js";
 import { request } from "../lib/io.js";
@@ -22,8 +24,8 @@ export const GEMINI_NAME = "Antigravity Gemini";
 export const THIRD_PARTY_NAME = "Antigravity Claude/GPT";
 
 export const POOLS = {
-  gemini: { name: GEMINI_NAME, buckets: [["gemini-5h", ROLLING], ["gemini-weekly", WEEKLY]] },
-  thirdParty: { name: THIRD_PARTY_NAME, buckets: [["3p-5h", ROLLING], ["3p-weekly", WEEKLY]] },
+  gemini: { name: GEMINI_NAME, families: ["gemini", "argon"] },
+  thirdParty: { name: THIRD_PARTY_NAME, families: ["thirdParty"] },
 };
 
 /**
@@ -92,6 +94,21 @@ async function fetchSummary(account) {
         res = await post(host, token);
       }
       if (res.status >= 200 && res.status < 300) {
+        // HTTP 200 can still be an empty or incompatible summary. Validate before
+        // caching so it cannot suppress the fallback host for both cards.
+        const readings = Object.values(POOLS).map((pool) => {
+          try {
+            return parse(pool, res.text, Date.now());
+          } catch (err) {
+            return { error: err };
+          }
+        });
+        // A malformed pool must not hide another pool's valid numbers. Each card
+        // still parses its own pool after the shared request completes.
+        if (!readings.some((reading) => reading.windows?.length)) {
+          throw readings.find((reading) => reading.error)?.error ??
+            transient("Antigravity 暫未提供可用額度，請在 agy 執行 /usage 確認後重試");
+        }
         cached.set(account.refresh, { at: Date.now(), body: res.text });
         return res.text;
       }
@@ -107,30 +124,102 @@ async function fetchSummary(account) {
 }
 
 /**
- * Pull one pool's windows out of the response. Pure, no IO. Buckets are matched by
- * `bucketId`, never by position: groups arrive in no fixed order, and an account
- * without a given limit omits its bucket. A bucket reports what is *left*, so the
- * panel's "used" is `1 - remainingFraction`.
+ * Pull one pool's windows out of the response. Pure, no IO. Stable bucket IDs
+ * remain supported; renamed IDs use the explicit group and cadence instead.
+ * A bucket reports what is left, so the panel's used value is 1 - remaining.
  */
 export function parse(pool, json, collectedAt) {
   const root = parseJson(json);
-  const groups = root?.response?.groups ?? root?.groups;
-  if (!Array.isArray(groups)) throw failed("Antigravity 額度回應缺少 'groups'。");
-  const buckets = groups.flatMap((g) => (isObject(g) && Array.isArray(g.buckets) ? g.buckets : []));
-
-  const windows = [];
-  for (const [id, kind] of pool.buckets) {
-    const bucket = buckets.find((b) => isObject(b) && b.bucketId === id);
-    if (!bucket) continue;
-    // A bucket without a fraction is a shape change, not an empty quota.
-    if (!isNumber(bucket.remainingFraction)) {
-      throw failed(`Antigravity 的 '${id}' 缺少 remainingFraction。`);
-    }
-    const used = (1 - clamp(bucket.remainingFraction, 0, 1)) * 100;
-    windows.push(usageWindow(kind, used, optionalIso(bucket, "resetTime")));
+  const payload = root?.response ?? root?.summary ?? root;
+  if (!Array.isArray(payload?.groups) && !Array.isArray(payload?.buckets)) {
+    throw failed("Antigravity 額度回應缺少 'groups' 或 'buckets'。");
+  }
+  const groups = Array.isArray(payload.groups) ? payload.groups : [];
+  const grouped = groups.flatMap((group) =>
+    isObject(group) && Array.isArray(group.buckets)
+      ? group.buckets.filter(isObject).map((bucket) => ({ bucket, family: familyOf(bucket, group) }))
+      : []);
+  // The proto also permits top-level buckets. Prefer grouped data whenever it
+  // contains a known family; mixing both representations could duplicate windows.
+  const buckets = grouped.some(({ family }) => family !== null)
+    ? grouped
+    : (Array.isArray(payload.buckets) ? payload.buckets : []).filter(isObject)
+      .map((bucket) => ({ bucket, family: familyOf(bucket) }));
+  if (!buckets.some(({ family }) => family !== null)) {
+    const err = transient("Antigravity 額度回應沒有可辨識的模型額度，請在 agy 執行 /usage 確認後重試");
+    // Include quota vocabulary only, never the raw response or account fields.
+    err.detail = JSON.stringify((groups ?? []).filter(isObject).map((group) => ({
+      group: group.displayName ?? group.name,
+      buckets: Array.isArray(group.buckets) ? group.buckets.filter(isObject).map((bucket) => ({
+        id: bucket.bucketId ?? bucket.id, window: bucket.window,
+      })) : [],
+    }))).slice(0, 1200);
+    throw err;
   }
 
-  // No bucket at all is an account without this pool — a fact to state, not an error.
-  if (windows.length === 0) return usage(pool.name, [], collectedAt, "此帳號沒有這組模型的額度");
+  const windows = [];
+  let disabled = false;
+  for (const { bucket, family: bucketFamily } of buckets) {
+    if (!pool.families.includes(bucketFamily)) continue;
+    if (bucket.disabled === true) {
+      disabled = true;
+      continue;
+    }
+    const id = bucket.bucketId ?? bucket.id ?? "unknown";
+    const kind = cadenceOf(bucket);
+    if (kind === null) throw failed(`Antigravity 的 '${id}' 額度窗口無法辨識。`);
+    // A bucket without a fraction is a shape change, not an empty quota.
+    const remaining = bucket.remainingFraction ?? bucket.remaining?.remainingFraction ??
+      (bucket.remaining?.case === "remainingFraction" ? bucket.remaining.value : undefined);
+    if (!isNumber(remaining)) {
+      throw failed(`Antigravity 的 '${id}' 缺少 remainingFraction。`);
+    }
+    const quotaGroup = bucketFamily === "argon" ? "Argon" : undefined;
+    if (windows.some((window) => window.kind === kind && window.quotaGroup === quotaGroup)) {
+      throw failed(`Antigravity 的 '${id}' 額度窗口重複，無法確認共用額度。`);
+    }
+    const used = (1 - clamp(remaining, 0, 1)) * 100;
+    windows.push({ ...usageWindow(kind, used, optionalIso(bucket, "resetTime")),
+      ...(quotaGroup ? { quotaGroup } : {}),
+    });
+  }
+
+  if (windows.length === 0) {
+    return usage(pool.name, [], collectedAt, disabled
+      ? "此方案未啟用這組模型的額度窗口"
+      : "此帳號沒有這組模型的額度");
+  }
+  windows.sort((a, b) => Number(Boolean(a.quotaGroup)) - Number(Boolean(b.quotaGroup)) ||
+    [ROLLING, WEEKLY].indexOf(a.kind) - [ROLLING, WEEKLY].indexOf(b.kind));
   return usage(pool.name, windows, collectedAt);
+}
+
+const words = (value) => typeof value === "string" ? value.trim().toLowerCase().replace(/[_-]+/g, " ") : "";
+
+function familyOf(bucket, group = {}) {
+  const name = words(group.displayName ?? group.name);
+  // Argon has its own weekly balance; its Gemini name does not make it part
+  // of the original Gemini shared pool.
+  if (/\bargon\b/.test(name) || /\bargon\b/.test(words(bucket.bucketId ?? bucket.id))) return "argon";
+  if (/\bgemini\b/.test(name)) return "gemini";
+  if (/\b(claude|gpt|third party)\b/.test(name)) return "thirdParty";
+  const id = words(bucket.bucketId ?? bucket.id);
+  if (/^gemini\b/.test(id)) return "gemini";
+  if (/^(3p|claude|gpt)\b/.test(id)) return "thirdParty";
+  return null;
+}
+
+function cadenceOf(bucket) {
+  const classify = (value) => {
+    const text = words(value).replace(/ limit$/, "");
+    if (/^(5h|5 hour|5 hours|five hour|five hours|session)$/.test(text)) return ROLLING;
+    if (/^(weekly|week|7d|7 day|7 days)$/.test(text)) return WEEKLY;
+    return null;
+  };
+  // An explicit new cadence must not inherit an old cadence from a bucket ID.
+  if (typeof bucket.window === "string" && bucket.window.trim()) return classify(bucket.window);
+  const id = words(bucket.bucketId ?? bucket.id).replace(/^(gemini|3p|claude|gpt) /, "");
+  const name = words(bucket.displayName ?? bucket.name);
+  const suffix = (text) => text.match(/(?:^| )(weekly|7d|5h|5 hours?|five hours?|session)(?: limit)?$/)?.[1];
+  return classify(id) ?? classify(name) ?? classify(suffix(id)) ?? classify(suffix(name));
 }

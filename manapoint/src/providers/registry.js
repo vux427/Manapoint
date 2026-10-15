@@ -16,8 +16,8 @@ const badge = (icon, background, foreground) => ({ icon, text: null, background,
 
 /**
  * Three brand colours are near-black and are told apart by glyph shape; opencode gets
- * a white ground so the row is not one solid black block, and Antigravity's two cards
- * share one mark because they are one subscription with two independent quota pools.
+ * a white ground so the row is not one solid black block, and Antigravity's cards
+ * share one mark because their independent quota pools belong to one subscription.
  */
 const PROVIDERS = [
   {

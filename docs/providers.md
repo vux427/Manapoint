@@ -188,7 +188,9 @@ Windows 憑證位置對照 [Meta 官方 SDK issue #38](https://github.com/meta-m
 
 ## Antigravity
 
-已驗證（2026-09-09）。Antigravity CLI 的執行檔是 `agy`。
+初次實機驗證（2026-09-09）；2026-10-16 補強新版回應相容處理。
+Antigravity CLI 的執行檔是 `agy`。新版相容性依上游解析器與合成 fixture 驗證，
+尚未以使用者帳號的原始回應驗證。
 
 - 憑證：**不是檔案**，是 OS keyring。`agy` 透過 go-keyring 存在 service `gemini`、
   account `antigravity` 底下；Windows 上就是憑證管理員的一般認證
@@ -239,7 +241,7 @@ Windows 憑證位置對照 [Meta 官方 SDK issue #38](https://github.com/meta-m
       ] } ] }
 ```
 
-四個 bucket 分兩池，**同池共用一組 5 小時與每週上限**：
+原本四個 bucket 分兩池，**同池共用一組 5 小時與每週上限**：
 
 | bucketId | 池 | 窗口 | Manapoint 的卡 |
 |---|---|---|---|
@@ -249,10 +251,30 @@ Windows 憑證位置對照 [Meta 官方 SDK issue #38](https://github.com/meta-m
 | `3p-weekly`     | Claude and GPT models| 每週   | Antigravity Claude/GPT |
 
 兩池的上限與重置時刻各自獨立（實測連 reset 秒數都不同），一張卡只有 5H 與 WEEK
-兩格放不下四個數字，所以拆成兩張卡。**bucket 一律用 `bucketId` 認，不看順序**——
-group 的順序不固定，實測 weekly 還排在 5h 前面。`remainingFraction` 是「剩下」的比例，
-面板要顯示的已用量是 `1 - remainingFraction`。沒有該 bucket 的帳號直接略過那一格；
-整池都沒有就顯示說明文字，不畫一條 0%。
+兩格放不下四個數字，所以拆成兩張卡。解析不看順序：舊版 `bucketId` 仍可用，
+新版 ID 改名時以 `groups[].displayName`／`name` 辨識模型池，以 `window` 辨識窗口。
+未提供 `window` 時才參考 bucket ID／`displayName`／`name`；支援 `5h`、
+`five hour`、`5-hour`、`session`、`weekly`、`7d` 等明確窗口名稱。
+明確回傳未知窗口時會報格式錯誤，不猜成 5 小時。
+
+回應可位於根節點、`response` 或 `summary`；分組未提供可辨識模型池時，亦支援
+根節點的 `buckets`。剩餘比例可位於 `remainingFraction`、
+`remaining.remainingFraction` 或 protobuf oneof 的
+`remaining: { case: "remainingFraction", value: 0.5 }`。
+`remainingAmount` 不會當成比例；缺少比例仍是格式錯誤，不能假造 0%。
+`disabled: true` 的窗口不畫 bar，只提供每週窗口的方案不會補造 5H。
+
+`remainingFraction` 是「剩下」的比例，面板已用量是 `1 - remainingFraction`。
+另一模型池已有可辨識額度、但此池未提供時才顯示「此帳號沒有這組模型的額度」。
+空的 `groups` 或完全無法辨識的回應會視為暫時無法取得，保留上次數字；
+不再直接斷言帳號沒有額度。相同模型池同時提供重複窗口時會報錯，避免選錯餘額。
+
+2026-10-16 使用者提供的 agy `/usage` 畫面另有 **Gemini 4 Argon** 獨立週額度；
+它與原本 Gemini 共用池放在同一張卡，以 `quotaGroup: "Argon"` 區分，不覆蓋
+原本 Gemini 的週額度。一般主題以「共用／Argon」兩列顯示，共用池 5H／WEEK 並排，
+Argon 的單一週額度則以整列寬度顯示；
+精簡主題將 Argon 放進原本空白的第三格，維持單列。每個池的提醒、趨勢與歷史紀錄
+各自獨立，設定中的每週窗口開關會同時控制兩個池的週額度。
 
 ### 兩台 host
 
@@ -273,7 +295,8 @@ group 的順序不固定，實測 weekly 還排在 5h 前面。`remainingFractio
 `cloudcode-pa` 留著當退路，是為了 daily 哪天消失；退到它時 Gemini 會低報成 0%。
 
 一次輪詢兩張卡只打一次網路：回應在模組內共用 30 秒（見 `antigravity.js` 的
-`SUMMARY_TTL_MS`），遠短於 5 分鐘的輪詢週期。
+`SUMMARY_TTL_MS`），遠短於 5 分鐘的輪詢週期。HTTP 200 仍須先通過額度解析，
+空的或不相容回應會繼續嘗試備用主機，且不寫入共用快取。
 
 注意：此端點的回應不含 email、user_id 等個資，只有上面這些 bucket 欄位。
 另有 `loadCodeAssist`（回 tier，可用）／`retrieveUserQuota`／`fetchAvailableModels`
@@ -287,6 +310,9 @@ Claude / Codex / Grok 三家的 endpoint 出處為 MIT 授權的
 Antigravity 的 endpoint 與 OAuth client 出處為 MIT 授權的
 [lamchun1110/UsageDeck](https://github.com/lamchun1110/UsageDeck)
 （`src-tauri/src/providers/antigravity`），憑證位置與回應形狀本專案另行實機驗證。
+新版 envelope、別名與 `remaining` oneof 的相容性參考
+[steipete/CodexBar 的解析器](https://github.com/steipete/CodexBar/blob/main/Sources/CodexBarCore/Providers/Antigravity/AntigravityQuotaSummaryParser.swift)
+及其 [quota summary 測試](https://github.com/steipete/CodexBar/blob/main/Tests/CodexBarTests/AntigravityQuotaSummaryTests.swift)。
 本專案為獨立實作，未複製其程式碼。
 
 ---

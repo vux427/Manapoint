@@ -13,10 +13,11 @@ const RESET_DROP = 20;
 
 const KIND_TEXT = { Rolling: "5 小時", Weekly: "每週", Monthly: "每月" };
 
-const sameWindow = (a, b) => a.kind === b.kind && (a.account ?? null) === (b.account ?? null);
+const sameWindow = (a, b) => a.kind === b.kind && (a.account ?? null) === (b.account ?? null) &&
+  (a.quotaGroup ?? null) === (b.quotaGroup ?? null);
 
 function subject(name, w) {
-  return `${name}${w.account ? `（${w.account}）` : ""}${KIND_TEXT[w.kind] ?? w.kind}額度`;
+  return `${name}${w.account ? `（${w.account}）` : ""}${w.quotaGroup ? ` ${w.quotaGroup} ` : ""}${KIND_TEXT[w.kind] ?? w.kind}額度`;
 }
 
 /** Alert lines for one provider: `before` and `after` are UsageWindow arrays. */

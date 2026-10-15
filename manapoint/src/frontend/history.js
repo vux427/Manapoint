@@ -41,7 +41,8 @@ function render() {
   body.replaceChildren();
   for (const { timestamp, card, window } of rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)) {
     const row = document.createElement("tr");
-    const values = [dateText(timestamp), card.name, window?.account ?? "—", KINDS[window?.kind] ?? "—",
+    const values = [dateText(timestamp), card.name, window?.account ?? "—",
+      [window?.quotaGroup, KINDS[window?.kind]].filter(Boolean).join(" · ") || "—",
       window ? remainingText(window.percent) : "—", window?.resetsAt ? dateText(window.resetsAt) : "—",
       card.error ?? card.note ?? (window ? "已更新" : "無額度資料")];
     for (const value of values) {

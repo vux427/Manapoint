@@ -7,6 +7,7 @@
 import { ICONS } from "./icons.js";
 import { keepEdges, snap, thresholdFor, workAreaFor } from "./snap.js";
 import { THEMES, themeByName } from "./themes.js";
+import { compactWindows, quotaGroups } from "./quota_groups.js";
 import {
   alertText,
   label,
@@ -75,12 +76,12 @@ function badgeNode(badge) {
   return host;
 }
 
-function meterNode(window_, now) {
-  const item = el("li", "meter");
+function meterNode(window_, now, mini = false) {
+  const item = el("li", mini ? "meter meter--mini" : "meter");
   item.dataset.kind = window_.kind;
   item.style.setProperty("--meter-fill", statusColor(theme, window_.percent));
 
-  item.appendChild(el("span", "meter__label", label(window_.kind)));
+  item.appendChild(el("span", "meter__label", mini ? shortLabel(window_.kind) : label(window_.kind)));
 
   if (theme.meterStyle === "segmented") {
     const cells = el("div", "meter__cells");
@@ -112,8 +113,32 @@ function meterNode(window_, now) {
   const runOut = runOutText(window_, now);
   const reset = el("span", "meter__reset", resetsInText(window_.resetsAt, now));
   if (runOut) item.title = runOut.title;
+  if (mini) {
+    const resetText = resetsInText(window_.resetsAt, now);
+    item.title = [window_.quotaGroup ?? "共用", label(window_.kind),
+      resetText ? `${resetText} 後重置` : "", runOut?.title].filter(Boolean).join(" · ");
+  }
   item.appendChild(reset);
   return item;
+}
+
+/** Each model pool gets one short row, with its cadences side by side. */
+function quotaRowNode(group, now) {
+  const row = el("li", "quota-row");
+  row.appendChild(el("span", "quota-row__name", group.name ?? "共用"));
+  const meters = el("ul", "quota-row__windows");
+  if (group.windows.length === 1) {
+    meters.classList.add("quota-row__windows--single");
+    meters.appendChild(meterNode(group.windows[0], now, true));
+    row.appendChild(meters);
+    return row;
+  }
+  for (const kind of COMPACT_SLOTS.slice(0, 2)) {
+    const window_ = group.windows.find((window) => window.kind === kind);
+    meters.appendChild(window_ ? meterNode(window_, now, true) : el("li", "quota-row__empty"));
+  }
+  row.appendChild(meters);
+  return row;
 }
 
 /**
@@ -150,7 +175,11 @@ function meterCard(card, now) {
     for (const group of groups) {
       // Label a group only when there is more than one: a lone account needs no name.
       if (groups.length > 1) meters.appendChild(el("li", "meter-group", group.account));
-      for (const w of group.windows) meters.appendChild(meterNode(w, now));
+      if (group.windows.some((window) => window.quotaGroup)) {
+        for (const pool of quotaGroups(group.windows)) meters.appendChild(quotaRowNode(pool, now));
+      } else {
+        for (const w of group.windows) meters.appendChild(meterNode(w, now));
+      }
     }
     article.appendChild(meters);
   }
@@ -174,8 +203,11 @@ function compactCard(card, group, first) {
   }
   article.appendChild(badgeNode(card.badge));
 
-  for (const kind of COMPACT_SLOTS) {
-    const window_ = group.windows.find((w) => w.kind === kind);
+  // Extra pool windows fill unused columns before extending the row. A Gemini
+  // account with 5h + weekly + Argon weekly therefore still takes one compact row.
+  const slots = compactWindows(group.windows, COMPACT_SLOTS);
+  for (const [index, window_] of slots.entries()) {
+    const kind = window_?.kind ?? COMPACT_SLOTS[index];
     const slot = el("span", window_ ? "compact__slot" : "compact__slot is-empty");
     slot.dataset.kind = kind;
 
@@ -185,8 +217,9 @@ function compactCard(card, group, first) {
       slot.style.setProperty("--meter-fill", statusColor(theme, window_.percent));
       // Projection is hover-only here too: no inline mark, just the tooltip.
       const runOut = runOutText(window_);
-      if (runOut) slot.title = runOut.title;
-      slot.appendChild(el("i", null, shortLabel(kind)));
+      slot.title = [window_.quotaGroup, label(kind),
+        window_.resetsAt ? `${resetsInText(window_.resetsAt)} 後重置` : "", runOut?.title].filter(Boolean).join(" · ");
+      slot.appendChild(el("i", null, window_.quotaGroup ?? shortLabel(kind)));
       slot.appendChild(el("b", null, percentText(window_.percent)));
     }
     article.appendChild(slot);

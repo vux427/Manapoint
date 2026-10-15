@@ -89,7 +89,7 @@ function render(data) {
     html += '<div class="card">';
     visible.forEach(function (w) {
       var p = Math.max(0, Math.min(100, w.percent));
-      html += '<div class="win">' + badgeHtml(card.badge) + '<span class="k">' + esc(kindLabel(w.kind)) + "</span>" +
+      html += '<div class="win" title="' + esc(w.quotaGroup ? w.quotaGroup + " · " + kindLabel(w.kind) : kindLabel(w.kind)) + '">' + badgeHtml(card.badge) + '<span class="k">' + esc(w.quotaGroup || kindLabel(w.kind)) + "</span>" +
         '<div class="track"><span class="fill" style="width: ' + p + "%; background: " + barColor(w.percent) + '"></span></div>' +
         '<span class="pct">' + Math.round(w.percent) + "%</span></div>";
     });

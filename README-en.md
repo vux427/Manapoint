@@ -81,6 +81,8 @@ The other themes give each provider its own column, header on top:
   logins opencode holds — console login included — and multi-account plugins); any
   route with data wins, and it only errors when all fail. Distinct accounts get one
   group of bars each
+- Antigravity Gemini groups its shared pool and Gemini 4 Argon's weekly balance
+  in one card; the Compact theme keeps them on a single row
 - Failures explain themselves and keep the last known numbers instead of going blank
 - Usage alerts: a system notification when any window crosses 80% or 95%, or resets
   after being high (can be turned off in settings)

@@ -16,7 +16,7 @@ export const MAX_AGE_MS = 24 * 60 * MINUTE;
 /** Polls closer than this overwrite the newest sample instead of adding one. */
 const SPACING_MS = 10 * MINUTE;
 
-export const windowKey = (cardId, w) => `${cardId}|${w.account ?? ""}|${w.kind}`;
+export const windowKey = (cardId, w) => `${cardId}|${w.account ?? ""}|${w.kind}${w.quotaGroup ? `|${w.quotaGroup}` : ""}`;
 
 /** Add one reading to `history` (mutated in place). */
 export function record(history, key, t, percent) {

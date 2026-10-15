@@ -26,7 +26,7 @@ export function labelled(routes, fallback) {
 /** Windows reduced to what two routes into one account necessarily agree on. */
 const fingerprint = (u) =>
   u.windows
-    .map((w) => `${w.kind}:${Math.round(w.percent * 10)}:${w.resetsAt ? w.resetsAt.slice(0, 16) : "-"}`)
+    .map((w) => `${w.quotaGroup ?? ""}:${w.kind}:${Math.round(w.percent * 10)}:${w.resetsAt ? w.resetsAt.slice(0, 16) : "-"}`)
     .join("|");
 
 /**

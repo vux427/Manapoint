@@ -36,6 +36,7 @@ export function payload(cards, now = Date.now()) {
         kind: w.kind,
         percent: w.percent,
         resetsAt: w.resetsAt ?? null,
+        ...(typeof w.quotaGroup === "string" ? { quotaGroup: w.quotaGroup } : {}),
       })),
     })),
   };

@@ -17,6 +17,7 @@ export function snapshot(cards, now = Date.now()) {
       windows: c.windows.map((w) => ({
         kind: w.kind, percent: w.percent, resetsAt: w.resetsAt ?? null,
         ...(typeof w.account === "string" ? { account: w.account } : {}),
+        ...(typeof w.quotaGroup === "string" ? { quotaGroup: w.quotaGroup } : {}),
       })),
     })),
   };

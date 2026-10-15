@@ -53,6 +53,12 @@ String enum, exactly three values: `"Rolling"` | `"Weekly"` | `"Monthly"`.
 
 `percent` is a float 0–100. `resetsAt` is an RFC 3339 string or `null`.
 
+`quotaGroup?: string` identifies an additional independent model pool within one
+card (currently `"Argon"` on `antigravity-gemini`). Untagged windows retain their
+existing identity. A weekly Argon window and an untagged weekly window are distinct;
+deduplication, alerts, trends, archives and companion payloads preserve this field.
+The `account` dimension remains independent of the model pool.
+
 Optional `account: "work"` — present only when a provider's routes (its own CLI,
 opencode's stored logins, multi-account plugins; see docs/providers.md) turned up
 **more than one distinct account** with data. Windows of one account are contiguous
@@ -82,7 +88,8 @@ render `badge.text` instead.
 
 Provider ids are fixed: `opencode-go`, `claude-code`, `codex`, `grok`,
 `antigravity-gemini`, `antigravity-3p`, `muse-code`. The two Antigravity ids are one subscription
-with two independent quota pools, so they are two cards sharing one badge.
+with independent quota pools. Gemini's base pool and Argon share the Gemini card;
+Claude/GPT retains its own card. Both cards share one badge.
 
 ### 1.4 CardState
 
@@ -307,6 +314,14 @@ in meter themes, `.card--compact.is-account-sequel` in vertical compact
 
 Per-meter fill colour is set as `--meter-fill` on `.meter` and on each filled `.compact__slot`.
 `.badge` carries `--badge-bg` and `--badge-fg`.
+
+When an account has windows carrying `quotaGroup`, meter themes render one
+`li.quota-row` per pool within the existing card. The pool label precedes a nested
+`ul.quota-row__windows`; five-hour and weekly `li.meter.meter--mini` windows sit side
+by side, with reset/projection details in their tooltips. Untagged windows form
+the `共用` row. A pool with only one window spans the full available row width.
+Compact themes fill unused columns with additional pool windows,
+labelled with the pool name, so Gemini 5h + weekly + Argon weekly occupies one row.
 
 ### 5.2 Layout rules
 
