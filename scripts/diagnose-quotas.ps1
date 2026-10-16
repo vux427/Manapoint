@@ -185,6 +185,60 @@ if (-not $SkipMuse) {
             $muse.activeSubscription = $result.data.is_subs_active -eq $true
             $muse.hasUsage = $null -ne $result.data.subs_usage
         } else { $muse.error = $result.error }
+        # Does the reply depend on the client identity? Report only whether usage appears.
+        $clients = [ordered]@{}
+        foreach ($agent in @('muse-build/0.1.0', 'muse/1.4.7', 'muse', 'Manapoint')) {
+            foreach ($bodyKind in @('empty-object', 'no-body')) {
+                $label = "$agent|$bodyKind"
+                try {
+                    $args2 = @{ Uri = 'https://api.meta.ai/muse-code/key'; Method = 'Post'; UseBasicParsing = $true
+                        TimeoutSec = 20; UserAgent = $agent
+                        Headers = @{ Authorization = "Bearer $token"; Accept = 'application/json'; 'x-api-version' = '1.0.0' } }
+                    if ($bodyKind -eq 'empty-object') { $args2.ContentType = 'application/json'; $args2.Body = '{}' }
+                    $r = Invoke-WebRequest @args2
+                    $d = $r.Content | ConvertFrom-Json
+                    $usageShape = if ($null -ne $d.subs_usage) { Get-QuotaShape $d.subs_usage } else { $null }
+                    $clients[$label] = [ordered]@{ status = [int]$r.StatusCode; hasUsage = $null -ne $d.subs_usage; usageShape = $usageShape }
+                } catch { $clients[$label] = [ordered]@{ error = 'request-failed' } }
+            }
+        }
+        $muse.clients = $clients
+        # Can the device token read the dev.meta.ai portal quota? Only statuses and
+        # field types/quota numbers are emitted; ids and names never leave this block.
+        $portal = [ordered]@{}
+        $portalHeaders = @{ Authorization = "Bearer $token"; Accept = 'application/json'; 'x-api-version' = '1.0.0' }
+        $teamId = $null
+        foreach ($path in @('/api/auth/me', '/api/portal/teams')) {
+            try {
+                $r = Invoke-WebRequest -Uri ('https://dev.meta.ai' + $path) -UseBasicParsing -TimeoutSec 20 `
+                    -UserAgent 'Manapoint' -Headers $portalHeaders
+                $body = $r.Content | ConvertFrom-Json
+                $portal[$path] = [ordered]@{ status = [int]$r.StatusCode; shape = Get-QuotaShape $body }
+                if ($path -eq '/api/portal/teams') {
+                    $list = if ($body -is [array]) { $body } elseif ($body.teams) { $body.teams } else { @($body) }
+                    $teamId = @($list)[0].team_id
+                }
+            } catch {
+                $s = 0
+                if ($null -ne $_.Exception.Response) { try { $s = [int]$_.Exception.Response.StatusCode } catch {} }
+                $portal[$path] = [ordered]@{ status = $s; error = 'request-failed' }
+            }
+        }
+        if ($teamId) {
+            try {
+                $r = Invoke-WebRequest -Uri "https://dev.meta.ai/api/portal/teams/$teamId/subscription-quota" `
+                    -UseBasicParsing -TimeoutSec 20 -UserAgent 'Manapoint' -Headers $portalHeaders
+                $q = $r.Content | ConvertFrom-Json
+                $nums = [ordered]@{}
+                foreach ($p in $q.PSObject.Properties) { if ($p.Value -is [ValueType] -and $p.Value -isnot [bool]) { $nums[$p.Name] = $p.Value } }
+                $portal.quota = [ordered]@{ status = [int]$r.StatusCode; shape = Get-QuotaShape $q; numbers = $nums }
+            } catch {
+                $s = 0
+                if ($null -ne $_.Exception.Response) { try { $s = [int]$_.Exception.Response.StatusCode } catch {} }
+                $portal.quota = [ordered]@{ status = $s; error = 'request-failed' }
+            }
+        }
+        $muse.portal = $portal
         $report.muse = $muse
     } catch {
         $report.muse = @{ error = 'Could not inspect Muse device login or quota; no credentials were printed.' }

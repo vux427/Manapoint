@@ -29,16 +29,20 @@ export const POOLS = {
 };
 
 /**
- * Tried in order, and the order matters. `agy` itself talks to the `daily-` host, and
- * only that one meters the Gemini pool: the plain host answers with a placeholder
- * (`remainingFraction: 1`, a reset recomputed as "now + window") and reports the
- * Claude/GPT pool a little stale too (measured 2026-09-09). The plain host stays as a
- * fallback for the day the `daily-` one goes away.
+ * Tried in order, and the order matters. `agy` itself talks to the `daily-` host as
+ * its hub client, and only that pairing meters the Gemini pool: with a bare
+ * `antigravity` User-Agent the `daily-` host answers 200 but leaves the Gemini group
+ * out entirely (measured 2026-10-16), and the plain host answers with a stale
+ * Gemini figure (0.98 where `daily-` says 1.0; measured 2026-09-09). The weaker
+ * pairings stay as fallbacks for the day the hub client string stops being accepted.
  */
-const SUMMARY_HOSTS = ["https://daily-cloudcode-pa.googleapis.com", "https://cloudcode-pa.googleapis.com"];
+const HUB_AGENT = "antigravity/hub/2.9.1 windows/amd64";
+const ATTEMPTS = [
+  { host: "https://daily-cloudcode-pa.googleapis.com", agent: HUB_AGENT },
+  { host: "https://daily-cloudcode-pa.googleapis.com", agent: "antigravity" },
+  { host: "https://cloudcode-pa.googleapis.com", agent: HUB_AGENT },
+];
 const SUMMARY_PATH = "/v1internal:retrieveUserQuotaSummary";
-/** The `agy` CLI identifies itself with this; the endpoint is picky about a client name. */
-const USER_AGENT = "antigravity";
 
 /** Long enough that both cards of one round share a request, short enough that a
  * manual refresh still goes to the network. */
@@ -70,10 +74,10 @@ function summary(account) {
   return inflight.get(key);
 }
 
-const post = (host, token) =>
+const post = ({ host, agent }, token) =>
   request(host + SUMMARY_PATH, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "User-Agent": USER_AGENT, accept: "application/json" },
+    headers: { Authorization: `Bearer ${token}`, "User-Agent": agent, accept: "application/json" },
     json: {},
   });
 
@@ -82,16 +86,17 @@ async function fetchSummary(account) {
   let token = await accessToken(account);
   let refreshed = false;
   let last = null;
+  let partial = null;
 
-  for (const host of SUMMARY_HOSTS) {
+  for (const attempt of ATTEMPTS) {
     try {
-      let res = await post(host, token);
+      let res = await post(attempt, token);
       if ((res.status === 401 || res.status === 403) && !refreshed) {
         // Lapsed since the proactive check, or `agy` signed in again: refresh once and
-        // retry this host.
+        // retry this attempt.
         refreshed = true;
         token = await refreshForRetry(account, token);
-        res = await post(host, token);
+        res = await post(attempt, token);
       }
       if (res.status >= 200 && res.status < 300) {
         // HTTP 200 can still be an empty or incompatible summary. Validate before
@@ -109,8 +114,16 @@ async function fetchSummary(account) {
           throw readings.find((reading) => reading.error)?.error ??
             transient("Antigravity 暫未提供可用額度，請在 agy 執行 /usage 確認後重試");
         }
-        cached.set(account.refresh, { at: Date.now(), body: res.text });
-        return res.text;
+        // A client the endpoint half-recognises answers 200 with a pool missing (the
+        // bare `antigravity` agent drops Gemini), which reads as a note-only pool.
+        // Keep it, but let the next attempt try for a complete answer before settling.
+        // A pool that errors is a shape change the next attempt will not cure.
+        if (readings.every((reading) => reading.windows?.length || reading.error)) {
+          cached.set(account.refresh, { at: Date.now(), body: res.text });
+          return res.text;
+        }
+        partial ??= res.text;
+        continue;
       }
       // A host that is gone or refuses this client is worth stepping past; only the
       // last one's reason reaches the card.
@@ -119,6 +132,10 @@ async function fetchSummary(account) {
       if (err.kind === "NotReady") throw err;
       last = err;
     }
+  }
+  if (partial !== null) {
+    cached.set(account.refresh, { at: Date.now(), body: partial });
+    return partial;
   }
   throw last ?? transient("Antigravity 額度查詢失敗，稍後自動重試");
 }

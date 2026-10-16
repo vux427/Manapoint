@@ -115,7 +115,10 @@ describe("Antigravity host fallback and shared cache", () => {
       assert.equal(gemini.windows.length, 3);
       assert.equal(thirdParty.windows.length, 2);
       assert.deepEqual(calls.map((c) => new URL(c.url).host), [
-        "daily-cloudcode-pa.googleapis.com", "cloudcode-pa.googleapis.com",
+        "daily-cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
+      ]);
+      assert.deepEqual(calls.map((c) => c.headers["User-Agent"]), [
+        "antigravity/hub/2.9.1 windows/amd64", "antigravity",
       ]);
       await collect(POOLS.gemini);
       assert.equal(calls.length, 2);
@@ -123,10 +126,26 @@ describe("Antigravity host fallback and shared cache", () => {
   });
 
   it("never caches empty summaries; a later refresh can recover", async () => {
-    await withRuntime([{ body: { groups: [] } }, { body: { groups: [] } }, { body: summary() }], async (calls) => {
+    await withRuntime([{ body: { groups: [] } }, { body: { groups: [] } }, { body: { groups: [] } }, { body: summary() }], async (calls) => {
       await assert.rejects(collect(POOLS.gemini), (err) => err.kind === "Transient");
       const recovered = await collect(POOLS.gemini);
       assert.equal(recovered.windows.length, 3);
+      assert.equal(calls.length, 4);
+    });
+  });
+
+  it("retries with a weaker client when a pool is missing, and keeps the partial if none is complete", async () => {
+    const full = summary();
+    const noGemini = { groups: full.groups.filter((g) => !/gemini/i.test(g.displayName ?? g.name ?? "")) };
+    assert.ok(noGemini.groups.length < full.groups.length, "fixture must contain a Gemini group");
+    await withRuntime([{ body: noGemini }, { body: full }], async (calls) => {
+      const gemini = await collect(POOLS.gemini);
+      assert.equal(gemini.windows.length, 3);
+      assert.equal(calls.length, 2);
+    });
+    await withRuntime([{ body: noGemini }, { body: noGemini }, { body: noGemini }], async (calls) => {
+      const gemini = await collect(POOLS.gemini);
+      assert.equal(gemini.windows.length, 0);
       assert.equal(calls.length, 3);
     });
   });

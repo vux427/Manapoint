@@ -180,7 +180,7 @@ Windows 憑證位置對照 [Meta 官方 SDK issue #38](https://github.com/meta-m
 
 - `require_payment: true`：提示至 dev.meta.ai 完成付款設定
 - `is_subs_active: false`：顯示沒有有效訂閱，不畫 0% bar
-- 已訂閱但 `subs_usage` 缺少或為 null：顯示「此登入回應未提供用量」。Meta 在短期窗口閒置時可能省略整份用量，即使每週已有消耗，也不能據此推算為 0%
+- 已訂閱但 `subs_usage` 缺少或為 null：顯示「此登入回應未提供用量」。2026-10-16 在真實訂閱帳號實測：回應只有訂閱狀態、方案名稱與 `api_key`，沒有 `subs_usage`；muse 1.4.7 執行檔內的欄位清單與解析結構（`SubscriptionUsageSnapshot`: window／weekly／tier）和我們一致，所以這是伺服器端沒給，不是解析錯。`dev.meta.ai` portal 端點（`/api/auth/me`、`/api/portal/teams`）對裝置 token 回 401，只認瀏覽器 cookie，本專案不走這條路。Meta 在短期窗口閒置時可能省略整份用量，即使每週已有消耗，也不能據此推算為 0%
 - `subs_usage` 存在但窗口或百分比格式不符：回應格式錯誤，不合成數字
 
 本版本讀取 Windows／Linux 的 CLI 檔案登入，不讀 macOS Keychain，也不讀瀏覽器 cookie 或自動挑選 dev.meta.ai 的 team。
@@ -216,7 +216,9 @@ Antigravity CLI 的執行檔是 `agy`。新版相容性依上游解析器與合�
 - 請求：`POST /v1internal:retrieveUserQuotaSummary`，host **依序**試
   `daily-cloudcode-pa.googleapis.com`，失敗才退到 `cloudcode-pa.googleapis.com`。
   **順序有意義**（見下方「兩台 host」）。
-- 認證：`Authorization: Bearer <access_token>`，另需 `User-Agent: antigravity`
+- 認證：`Authorization: Bearer <access_token>`，另需 `User-Agent: antigravity/hub/2.9.1 windows/amd64`（`agy` 自己的 hub 客戶端字串）。
+  2026-10-16 實測：`daily-` 主機搭配裸 `antigravity` 仍回 200，但整個 Gemini 群組缺席；只有 hub 字串兩個群組都在。
+  Manapoint 依序試 daily+hub、daily+`antigravity`、plain+hub，某組只回部分群組時換下一組，都不完整才用部分結果
   （端點會挑 client 名稱：`agy` 或不帶 UA 都回 403）
 - 請求 body 只有 `project` 一個合法欄位，且給不給都不影響回傳
 - 成本：純讀，不消耗配額
