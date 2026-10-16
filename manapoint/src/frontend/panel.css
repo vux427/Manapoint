@@ -226,7 +226,8 @@ body {
 
 #panel .meter--mini,
 .panel .meter--mini {
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 3px;
   row-gap: 3px;
 }
 
@@ -264,6 +265,17 @@ body {
 
 #panel .meter--mini .meter__reset,
 .panel .meter--mini .meter__reset {
+  grid-column: 3;
+  grid-row: 1;
+  justify-content: flex-end;
+  padding-left: 0;
+}
+
+/* The mini header shares one line; omit separators to leave room for 100%. */
+#panel .meter--mini .meter__reset:empty,
+.panel .meter--mini .meter__reset:empty,
+#panel .meter--mini .meter__reset::before,
+.panel .meter--mini .meter__reset::before {
   display: none;
 }
 
