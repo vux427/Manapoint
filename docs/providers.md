@@ -213,13 +213,19 @@ Antigravity CLI 的執行檔是 `agy`。新版相容性依上游解析器與合�
   Manapoint 的行程記憶體裡（常駐程式，一次換發夠用很多輪；重啟就再換一次），
   這同時守住下面「不寫出 token」那條。
 - 到期前 5 分鐘主動換發；用量 API 回 401/403 時再換發重試一次。
-- 請求：`POST /v1internal:retrieveUserQuotaSummary`，host **依序**試
-  `daily-cloudcode-pa.googleapis.com`，失敗才退到 `cloudcode-pa.googleapis.com`。
-  **順序有意義**（見下方「兩台 host」）。
-- 認證：`Authorization: Bearer <access_token>`，另需 `User-Agent: antigravity/hub/2.9.1 windows/amd64`（`agy` 自己的 hub 客戶端字串）。
-  2026-10-16 實測：`daily-` 主機搭配裸 `antigravity` 仍回 200，但整個 Gemini 群組缺席；只有 hub 字串兩個群組都在。
-  Manapoint 依序試 daily+hub、daily+`antigravity`、plain+hub，某組只回部分群組時換下一組，都不完整才用部分結果
-  （端點會挑 client 名稱：`agy` 或不帶 UA 都回 403）
+- 請求：`POST /v1internal:retrieveUserQuotaSummary`，依序試 plain+CLI、`daily-`+CLI、`daily-`+hub
+  （主機與客戶端字串各自的行為見下方「兩台 host」）。
+- 認證：`Authorization: Bearer <access_token>`，另需 `User-Agent`；端點會挑 client 名稱
+  （不帶 UA 或用 `agy` 都回 403），而且**客戶端字串決定回哪些群組**（2026-10-16 實測，`daily-` 主機）：
+
+  | User-Agent | 群組 |
+  |---|---|
+  | `antigravity`、`antigravity-cli`、`antigravity-cli/1.3.6 windows/amd64` | 只有 Claude/GPT |
+  | `antigravity/hub/2.9.1 windows/amd64` | Gemini ＋ Claude/GPT |
+  | `antigravity/cli/1.3.6 windows/amd64` | Gemini ＋ Claude/GPT ＋ **Gemini 4 Argon**（`gemini-argon-wtu-weekly`） |
+
+  plain 主機不論客戶端字串都只回 Gemini ＋ Claude/GPT，沒有 Argon。
+  `fetchAvailableModels` 與 `retrieveUserQuota` 兩支 RPC 也沒有 Argon。
 - 請求 body 只有 `project` 一個合法欄位，且給不給都不影響回傳
 - 成本：純讀，不消耗配額
 
@@ -280,10 +286,13 @@ Argon 的單一週額度則以整列寬度顯示；
 
 ### 兩台 host
 
-`agy` 自己打的是 `daily-cloudcode-pa`，**只有那台在計 Gemini 這一池**。
-`cloudcode-pa` 對 Gemini 兩格回的是佔位值：`remainingFraction` 恆為 1、
-`resetTime` 每次查都重算成「現在 + 窗口長度」——那是窗口從未開始計數的樣子。
-連 Claude/GPT 那池也略舊。2026-09-09 相隔數秒的實測：
+**2026-10-16 起的取法：Gemini／Claude/GPT 取自 plain 主機，Argon 從 `daily-` 主機（CLI 客戶端字串）嫁接上去**
+（`antigravity.js` 的 `withArgon`）。依據是 agy 1.3.6 `/usage` 畫面：Gemini 週額度 98.22%、
+Argon 99.39%——前者等於 plain 主機的 0.98221374，而 `daily-` 現在對 Gemini 兩格回恆為 1；
+後者只有 `daily-` ＋ CLI 字串的回應才有。Argon 請求失敗時卡片保留基礎讀數，不轉紅。
+
+歷史（2026-09-09）：當時相反——`daily-` 才是 Gemini 的真值，plain 回佔位值
+（`remainingFraction` 恆為 1、`resetTime` 每次重算成「現在 + 窗口長度」）：
 
 | bucket | daily-cloudcode-pa | cloudcode-pa |
 |---|---|---|
@@ -292,9 +301,8 @@ Argon 的單一週額度則以整列寬度顯示；
 | `3p-weekly`     | rem=0.6663967 | rem=0.6612584 |
 | `3p-5h`         | rem=0，reset 20:58:51Z | rem=0，reset 20:58:51Z |
 
-同時間 `agy` 的 `/usage` 顯示 Gemini 5h 剩 48.69%（reset 4h13m 後 = 20:45:45Z）、
-3p weekly 剩 66.64%——兩個數字都只對得上 daily 那台。
-`cloudcode-pa` 留著當退路，是為了 daily 哪天消失；退到它時 Gemini 會低報成 0%。
+伺服器的行為會變，兩台 host 誰準要以 `agy` 的 `/usage` 為準對照；若日後 Gemini 又對不上，
+先重跑 `scripts/diagnose-quotas.ps1` 比較兩台。
 
 一次輪詢兩張卡只打一次網路：回應在模組內共用 30 秒（見 `antigravity.js` 的
 `SUMMARY_TTL_MS`），遠短於 5 分鐘的輪詢週期。HTTP 200 仍須先通過額度解析，

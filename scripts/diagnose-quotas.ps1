@@ -142,7 +142,7 @@ public static class ManapointQuotaCredential {
         if ($project -isnot [string]) { $project = $project.id }
         $results = @()
         foreach ($hostUrl in $hosts) {
-            foreach ($agent in @('antigravity', $hub)) {
+            foreach ($agent in @('antigravity', $hub, 'antigravity-cli/1.3.6 windows/amd64', 'antigravity/cli/1.3.6 windows/amd64', 'antigravity-cli')) {
                 $result = Invoke-QuotaPost ($hostUrl + '/v1internal:retrieveUserQuotaSummary') $token $agent @{}
                 $safe = Get-SafeQuotaSummary $result
                 $safe.host = $hostUrl
@@ -159,7 +159,41 @@ public static class ManapointQuotaCredential {
                 $results += $safe
             }
         }
-        $report.antigravity = @{ setupStatus = $setup.status; hasProject = [bool]$project; responses = $results }
+        # Where does the Argon balance live? Print structure (key names, shapes) of the
+        # other quota RPCs, plus the numbers of anything whose key or id mentions argon.
+        $others = [ordered]@{}
+        foreach ($rpc in @('fetchAvailableModels', 'retrieveUserQuota')) {
+            $probe = Invoke-QuotaPost ($hosts[0] + '/v1internal:' + $rpc) $token $hub @{ project = $project }
+            $entry2 = [ordered]@{ status = $probe.status }
+            if ($probe.ContainsKey('data')) {
+                $entry2.shape = Get-QuotaShape $probe.data
+                $argon = @()
+                $stack = New-Object System.Collections.Stack
+                $stack.Push(@{ path = '$'; value = $probe.data })
+                while ($stack.Count -gt 0) {
+                    $item = $stack.Pop()
+                    $v = $item.value
+                    if ($null -eq $v -or $v -is [string] -or $v -is [ValueType]) { continue }
+                    if ($v -is [array]) { $i = 0; foreach ($x in $v) { $stack.Push(@{ path = "$($item.path)[$i]"; value = $x }); $i++ }; continue }
+                    $hit = $false
+                    foreach ($p in $v.PSObject.Properties) {
+                        if ($p.Name -match 'argon' -or ($p.Value -is [string] -and $p.Value -match 'argon')) { $hit = $true }
+                        $stack.Push(@{ path = "$($item.path).$($p.Name)"; value = $p.Value })
+                    }
+                    if ($hit) {
+                        $nums = [ordered]@{}
+                        foreach ($p in $v.PSObject.Properties) {
+                            if ($p.Value -is [string] -and $p.Value.Length -le 80 -and $p.Name -notmatch 'token|email|project') { $nums[$p.Name] = $p.Value }
+                            elseif ($p.Value -is [ValueType]) { $nums[$p.Name] = $p.Value }
+                        }
+                        $argon += [ordered]@{ path = $item.path; fields = $nums; shape = Get-QuotaShape $v 3 }
+                    }
+                }
+                $entry2.argonMatches = $argon
+            } else { $entry2.error = $probe.error }
+            $others[$rpc] = $entry2
+        }
+        $report.antigravity = @{ setupStatus = $setup.status; hasProject = [bool]$project; responses = $results; otherRpcs = $others }
     } catch {
         $report.antigravity = @{ error = 'Could not inspect agy login or quota; no credentials were printed.' }
     } finally {

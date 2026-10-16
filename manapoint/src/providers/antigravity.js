@@ -29,18 +29,25 @@ export const POOLS = {
 };
 
 /**
- * Tried in order, and the order matters. `agy` itself talks to the `daily-` host as
- * its hub client, and only that pairing meters the Gemini pool: with a bare
- * `antigravity` User-Agent the `daily-` host answers 200 but leaves the Gemini group
- * out entirely (measured 2026-10-16), and the plain host answers with a stale
- * Gemini figure (0.98 where `daily-` says 1.0; measured 2026-09-09). The weaker
- * pairings stay as fallbacks for the day the hub client string stops being accepted.
+ * Which host and client string answers with what (measured 2026-10-16 against the
+ * `/usage` screen of agy 1.3.6, which is the ground truth for the numbers):
+ *   - the plain host carries the real Gemini and Claude/GPT figures but never an
+ *     Argon group; the `daily-` host reports Gemini as a flat 1.0 here;
+ *   - the `daily-` host adds the `Gemini 4 Argon` group only for the CLI's own client
+ *     string, and drops the Gemini group for a bare `antigravity` agent.
+ * So the base reading comes from the plain host and Argon is grafted on from the
+ * `daily-` host (see `withArgon`). The weaker pairings stay as fallbacks for the day
+ * a client string stops being accepted.
  */
+const PLAIN_HOST = "https://cloudcode-pa.googleapis.com";
+const DAILY_HOST = "https://daily-cloudcode-pa.googleapis.com";
+const CLI_AGENT = "antigravity/cli/1.3.6 windows/amd64";
 const HUB_AGENT = "antigravity/hub/2.9.1 windows/amd64";
+const ARGON_ATTEMPT = { host: DAILY_HOST, agent: CLI_AGENT };
 const ATTEMPTS = [
-  { host: "https://daily-cloudcode-pa.googleapis.com", agent: HUB_AGENT },
-  { host: "https://daily-cloudcode-pa.googleapis.com", agent: "antigravity" },
-  { host: "https://cloudcode-pa.googleapis.com", agent: HUB_AGENT },
+  { host: PLAIN_HOST, agent: CLI_AGENT },
+  ARGON_ATTEMPT,
+  { host: DAILY_HOST, agent: HUB_AGENT },
 ];
 const SUMMARY_PATH = "/v1internal:retrieveUserQuotaSummary";
 
@@ -119,8 +126,9 @@ async function fetchSummary(account) {
         // Keep it, but let the next attempt try for a complete answer before settling.
         // A pool that errors is a shape change the next attempt will not cure.
         if (readings.every((reading) => reading.windows?.length || reading.error)) {
-          cached.set(account.refresh, { at: Date.now(), body: res.text });
-          return res.text;
+          const body = await graftArgon(res.text, attempt, token);
+          cached.set(account.refresh, { at: Date.now(), body });
+          return body;
         }
         partial ??= res.text;
         continue;
@@ -138,6 +146,51 @@ async function fetchSummary(account) {
     return partial;
   }
   throw last ?? transient("Antigravity 額度查詢失敗，稍後自動重試");
+}
+
+/** The base reading plus Argon from the `daily-` host. Argon is an extra: when that
+ * request fails the card keeps what it has rather than going red. */
+async function graftArgon(baseText, usedAttempt, token) {
+  if (usedAttempt === ARGON_ATTEMPT || hasArgon(baseText)) return baseText;
+  try {
+    const res = await post(ARGON_ATTEMPT, token);
+    if (res.status >= 200 && res.status < 300) return withArgon(baseText, res.text);
+  } catch (err) {
+    if (err.kind === "NotReady") throw err;
+  }
+  return baseText;
+}
+
+const payloadOf = (root) => root?.response ?? root?.summary ?? root;
+const argonGroups = (root) => {
+  const groups = payloadOf(root)?.groups;
+  return Array.isArray(groups)
+    ? groups.filter((group) => isObject(group) && Array.isArray(group.buckets) &&
+        group.buckets.some((bucket) => isObject(bucket) && familyOf(bucket, group) === "argon"))
+    : [];
+};
+const hasArgon = (text) => {
+  try { return argonGroups(JSON.parse(text)).length > 0; } catch { return false; }
+};
+
+/**
+ * Pure: `baseText` with the Argon group(s) of `extraText` added. Anything unreadable
+ * on either side leaves the base untouched.
+ */
+export function withArgon(baseText, extraText) {
+  let base;
+  let extra;
+  try {
+    base = JSON.parse(baseText);
+    extra = JSON.parse(extraText);
+  } catch {
+    return baseText;
+  }
+  const payload = payloadOf(base);
+  const additions = argonGroups(extra);
+  if (!Array.isArray(payload?.groups) || additions.length === 0 || argonGroups(base).length > 0) return baseText;
+  payload.groups = [...payload.groups, ...additions];
+  return JSON.stringify(base);
 }
 
 /**

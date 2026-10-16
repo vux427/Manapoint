@@ -2,7 +2,7 @@
 // balances mirror the user's agy screenshot; no real account data is required.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { collect, parse, POOLS } from "../src/providers/antigravity.js";
+import { collect, parse, POOLS, withArgon } from "../src/providers/antigravity.js";
 
 const at = Date.UTC(2026, 9, 15);
 const summary = () => ({ groups: [
@@ -115,10 +115,10 @@ describe("Antigravity host fallback and shared cache", () => {
       assert.equal(gemini.windows.length, 3);
       assert.equal(thirdParty.windows.length, 2);
       assert.deepEqual(calls.map((c) => new URL(c.url).host), [
-        "daily-cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
+        "cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
       ]);
       assert.deepEqual(calls.map((c) => c.headers["User-Agent"]), [
-        "antigravity/hub/2.9.1 windows/amd64", "antigravity",
+        "antigravity/cli/1.3.6 windows/amd64", "antigravity/cli/1.3.6 windows/amd64",
       ]);
       await collect(POOLS.gemini);
       assert.equal(calls.length, 2);
@@ -148,6 +148,44 @@ describe("Antigravity host fallback and shared cache", () => {
       assert.equal(gemini.windows.length, 0);
       assert.equal(calls.length, 3);
     });
+  });
+
+  it("takes Gemini from the plain host and grafts Argon on from the daily host", async () => {
+    const full = summary();
+    const plain = { groups: full.groups.filter((g) => !/argon/i.test(g.displayName)) };
+    const daily = { groups: [full.groups[2]] };
+    await withRuntime([{ body: plain }, { body: daily }], async (calls) => {
+      const gemini = await collect(POOLS.gemini);
+      assert.deepEqual(gemini.windows.map((w) => w.quotaGroup), [undefined, undefined, "Argon"]);
+      assert.equal(gemini.windows[2].percent > 0.5 && gemini.windows[2].percent < 0.7, true);
+      assert.deepEqual(calls.map((c) => new URL(c.url).host), [
+        "cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
+      ]);
+      await collect(POOLS.thirdParty);
+      assert.equal(calls.length, 2, "the sibling card reuses the merged summary");
+    });
+  });
+
+  it("keeps the base reading when the Argon request fails", async () => {
+    const full = summary();
+    const plain = { groups: full.groups.filter((g) => !/argon/i.test(g.displayName)) };
+    await withRuntime([{ body: plain }, { status: 500, body: {} }], async () => {
+      const gemini = await collect(POOLS.gemini);
+      assert.equal(gemini.windows.length, 2);
+    });
+  });
+
+  it("withArgon adds only an Argon group, never replaces the base, and tolerates junk", () => {
+    const full = summary();
+    const plain = JSON.stringify({ groups: full.groups.slice(0, 2) });
+    const merged = JSON.parse(withArgon(plain, JSON.stringify({ response: { groups: [full.groups[0], full.groups[2]] } })));
+    assert.deepEqual(merged.groups.map((g) => g.displayName), [
+      "GEMINI MODELS", "CLAUDE AND GPT MODELS", "GEMINI 4 ARGON",
+    ]);
+    assert.equal(withArgon(plain, "not json"), plain);
+    assert.equal(withArgon("not json", plain), "not json");
+    const already = JSON.stringify(full);
+    assert.equal(withArgon(already, already), already);
   });
 
   it("keeps a valid pool available when the sibling pool changes shape", async () => {
