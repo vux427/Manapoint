@@ -9,16 +9,16 @@
 已驗證（2026-09-05）。
 
 - 憑證（依序讀取，同一把 key 只算一個帳號）：
-  - `~/.local/share/opencode/auth.json` → `["opencode-go"].key`（`sk-` 開頭；`opencode auth login` → OpenCode Go）
-  - 同檔 `["opencode"].key`（`opencode auth login` → OpenCode，也就是 Zen／console 的 API key）。
+  - `opencode.db` 的 `credential` 表（新版 opencode 把登入都存在這裡，auth.json 不再更新）
+    裡 `integration_id = 'opencode'` 或 `'opencode-go'` 的列：console 登入（裝置碼 OAuth，
+    `value = { type:'oauth', access, refresh, expires, metadata:{ server, accountID, email, orgID, orgName } }`）
+    或服務帳號／Go 金鑰（`type:'key'`／`'api'`）。優先於舊版 `auth.json`，避免 `auth.json` 殘留的過期 API Key 蓋過 console 狀態
+  - `~/.local/share/opencode/auth.json` → `["opencode-go"].key`（`sk-` 開頭；舊版 `opencode auth login` → OpenCode Go）
+  - 同檔 `["opencode"].key`（舊版 `opencode auth login` → OpenCode，也就是 Zen／console 的 API key）。
     伺服器端與 Go 共用同一張 key 表，所以同一個 `/usage` 端點也吃這把 key；
     該 workspace 沒有 Go 訂閱時回 **403**（`EntitlementError`），面板顯示「此帳號沒有 Go 訂閱」而非錯誤
   - `~/.config/opencode/opencode-go-accounts.json`（opencode-go-multi-auth 外掛：
     `{ version: 1, accounts: [{ apiKey, label, enabled }] }`，`enabled: false` 略過）
-  - `opencode.db` 的 `credential` 表（新版 opencode 把登入都存在這裡，auth.json 不再更新）
-    裡 `integration_id = 'opencode'` 的列：console 登入（裝置碼 OAuth，
-    `value = { type:'oauth', access, refresh, expires, metadata:{ server, accountID, email, orgID, orgName } }`）
-    或服務帳號金鑰（`type:'key'`）
 - console 帳號的用量不在 `/zen`（實測 2026-09-26）：
   1. `GET {server}/api/config`（`Authorization: Bearer <console access>`、`x-org-id: <orgID>`）
      回 `config.provider["opencode-go"]`：`api` = `https://opencode.ai/inference/go/openai/v1`、

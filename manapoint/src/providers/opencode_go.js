@@ -43,14 +43,27 @@ export async function collect() {
   return collectRoutes(PROVIDER_NAME, routes, "尚未登入 opencode Go 或 opencode（Zen／console）");
 }
 
-async function collectOne({ key, headers, url }) {
-  const res = await request(url ?? USAGE_URL, { headers: { ...headers, Authorization: `Bearer ${key}` } });
+async function collectOne(account) {
+  if (account.error) throw account.error;
+  let res = await fetchUsage(account);
+  if (res.status === 401 && typeof account.refresh === "function") {
+    res = await fetchUsage(await account.refresh());
+  }
   // The key is valid but its workspace has no Go plan (typical for a Zen-only key).
   if (res.status === 403) return usage(PROVIDER_NAME, [], Date.now(), "此帳號沒有 Go 訂閱");
-  if (res.status === 401) throw notReady("金鑰已失效，請在 opencode 重新登入");
+  if (res.status === 401) {
+    throw notReady(
+      typeof account.refresh === "function"
+        ? "opencode console 登入已失效，請重新執行 opencode auth login"
+        : "金鑰已失效，請在 opencode 重新登入",
+    );
+  }
   if (res.status < 200 || res.status >= 300) throw statusError(res.status, res.text);
   return parse(res.text, Date.now());
 }
+
+const fetchUsage = ({ key, headers, url }) =>
+  request(url ?? USAGE_URL, { headers: { ...headers, Authorization: `Bearer ${key}` } });
 
 /** Parse `GET /zen/go/v1/usage`. A shape mismatch is an error, not something to paper over. */
 export function parse(json, collectedAt) {
@@ -78,20 +91,19 @@ const tryJson = (text) => {
 };
 
 async function readAccounts() {
-  const [authText, pluginText, rows] = await Promise.all([
+  const [authText, pluginText, consoleRows, goRows] = await Promise.all([
     readText(opencodeAuth()),
     readText(multiAuthFile()),
     opencodeDb.credentials("opencode"),
+    opencodeDb.credentials("opencode-go"),
   ]);
   const auth = tryJson(authText);
   const plugin = tryJson(pluginText);
-  const consoleKeys = await Promise.all(rows.map(keyFromRow));
+  const consoleKeys = await Promise.all([...consoleRows, ...goRows].map(keyFromRow));
   const accounts = accountsFrom(auth, plugin, consoleKeys.filter(Boolean));
   if (accounts.length > 0) return accounts;
 
   // Nothing usable anywhere: say which step is missing.
-  const failure = consoleKeys.find((k) => k && k.error);
-  if (failure) throw failure.error;
   const haveDb = await exists(opencodeDb.dbPath());
   if (authText === null && pluginText === null && !haveDb) throw notReady("找不到 opencode，請先安裝並登入");
   if (auth === undefined) throw notReady("opencode 憑證檔讀不懂，請重新登入");
@@ -110,23 +122,48 @@ const REFRESH_SKEW_MS = 300_000;
 /** Where each console login's usage lives ({ url, headers }), fetched once per run. */
 const consoleRouteCache = new Map();
 
-/** One 'opencode' credential row → { key, label } | { error } | null. */
+/** One 'opencode' or 'opencode-go' credential row → { key, label, … } | { error, label } | null. */
 async function keyFromRow(row) {
   const v = row.value;
   const label = consoleLabel(v, row.label);
   if (v.type === "key" || v.type === "api") return str(v.key) ? { key: v.key, label } : null;
-  if (v.type !== "oauth" || !str(v.access)) return null;
+  if (v.type !== "oauth" || (!str(v.access) && !str(v.refresh))) return null;
   try {
-    const access = await consoleAccess(row);
+    let access = await consoleAccess(row);
     let route = consoleRouteCache.get(row.id);
     if (!route) {
-      route = await consoleRoute(row, access);
+      try {
+        route = await consoleRoute(row, access);
+      } catch (err) {
+        if (err.kind === "NotReady" && str(v.refresh)) {
+          access = await refreshConsoleToken(row);
+          route = await consoleRoute(row, access);
+        } else {
+          throw err;
+        }
+      }
       consoleRouteCache.set(row.id, route);
     }
-    return { key: access, url: route.url, headers: route.headers, label };
+    return {
+      key: access,
+      url: route.url,
+      headers: route.headers,
+      label,
+      refresh: str(v.refresh) ? () => refreshConsoleAccount(row) : null,
+    };
   } catch (err) {
-    return { error: err };
+    return { error: err, label };
   }
+}
+
+async function refreshConsoleAccount(row) {
+  const access = await refreshConsoleToken(row);
+  let route = consoleRouteCache.get(row.id);
+  if (!route) {
+    route = await consoleRoute(row, access);
+    consoleRouteCache.set(row.id, route);
+  }
+  return { key: access, url: route.url, headers: route.headers };
 }
 
 export function consoleLabel(v, rowLabel) {
@@ -139,27 +176,33 @@ const serverOf = (v) => str(isObject(v.metadata) ? v.metadata.server : null) ?? 
 /** The console access token, refreshed (and written back) when spent. */
 async function consoleAccess(row) {
   const v = row.value;
-  const server = serverOf(v);
-  let access = v.access;
-
-  if (isInteger(v.expires) && v.expires <= Date.now() + REFRESH_SKEW_MS && str(v.refresh)) {
-    const res = await request(`${server}/auth/device/token`, {
-      method: "POST",
-      headers: { accept: "application/json" },
-      json: { grant_type: "refresh_token", refresh_token: v.refresh, client_id: CONSOLE_CLIENT_ID },
-    });
-    if (res.status === 400 || res.status === 401) throw notReady("opencode console 登入已失效，請重新執行 opencode console login");
-    if (res.status < 200 || res.status >= 300) throw transient("opencode console 換發失敗，稍後自動重試");
-    const t = parseJson(res.text);
-    if (!str(t?.access_token)) throw transient("opencode console 換發回應缺少 access_token，稍後自動重試");
-    access = t.access_token;
-    // The console rotates refresh tokens: write back, or opencode is signed out.
-    await opencodeDb.updateCredential(row.id, {
-      access,
-      refresh: str(t.refresh_token) ?? v.refresh,
-      expires: Date.now() + (isInteger(t.expires_in) ? t.expires_in : 3600) * 1000,
-    });
+  if (str(v.access) && isInteger(v.expires) && v.expires > Date.now() + REFRESH_SKEW_MS) {
+    return v.access;
   }
+  if (!str(v.refresh)) return v.access;
+  return refreshConsoleToken(row);
+}
+
+async function refreshConsoleToken(row) {
+  const v = row.value;
+  const server = serverOf(v);
+  const res = await request(`${server}/auth/device/token`, {
+    method: "POST",
+    headers: { accept: "application/json" },
+    json: { grant_type: "refresh_token", refresh_token: v.refresh, client_id: CONSOLE_CLIENT_ID },
+  });
+  if (res.status === 400 || res.status === 401) {
+    throw notReady("opencode console 登入已失效，請重新執行 opencode auth login");
+  }
+  if (res.status < 200 || res.status >= 300) throw transient("opencode console 換發失敗，稍後自動重試");
+  const t = parseJson(res.text);
+  if (!str(t?.access_token)) throw transient("opencode console 換發回應缺少 access_token，稍後自動重試");
+  const access = t.access_token;
+  const refresh = str(t.refresh_token) ?? v.refresh;
+  const expires = Date.now() + (isInteger(t.expires_in) ? t.expires_in : 3600) * 1000;
+  // The console rotates refresh tokens: write back, or opencode is signed out.
+  await opencodeDb.updateCredential(row.id, { access, refresh, expires });
+  Object.assign(v, { access, refresh, expires });
   return access;
 }
 
@@ -176,7 +219,7 @@ async function consoleRoute(row, access) {
       ...(str(m.orgID) ? { "x-org-id": m.orgID } : {}),
     },
   });
-  if (res.status === 401) throw notReady("opencode console 登入已失效，請重新執行 opencode console login");
+  if (res.status === 401) throw notReady("opencode console 登入已失效，請重新執行 opencode auth login");
   if (res.status < 200 || res.status >= 300) throw statusError(res.status, res.text);
   const route = consoleUsageRoute(parseJson(res.text));
   if (!route) throw failed("opencode console 設定裡沒有 Go 的推論閘道。");
@@ -201,18 +244,27 @@ export function consoleUsageRoute(config) {
   return { url: `${m[1]}/v1/usage`, headers };
 }
 
-/** Every distinct key, labelled. Pure. */
+/**
+ * Every distinct route, labelled, with current opencode.db logins ahead of legacy
+ * auth.json so a stale key left in auth.json never masks or outranks a console login.
+ * Pure.
+ */
 export function accountsFrom(auth, plugin, consoleKeys = []) {
   const found = [];
-  const add = (key, label, headers = {}, url = null) => {
+  const add = (key, label, headers = {}, url = null, refresh = null) => {
     const k = str(key)?.trim();
-    if (k && !found.some((a) => a.key === k)) found.push({ key: k, label, headers, url });
+    if (k && !found.some((a) => a.key === k)) {
+      found.push({ key: k, label, headers, url, ...(refresh ? { refresh } : {}) });
+    }
   };
+  for (const c of consoleKeys) {
+    if (c.key) add(c.key, c.label, c.headers, c.url, c.refresh);
+    else if (c.error) found.push({ error: c.error, label: c.label ?? "Console" });
+  }
   if (isObject(auth)) {
     add(auth["opencode-go"]?.key, "Go");
     add(auth.opencode?.key, "Zen");
   }
-  for (const c of consoleKeys) if (c.key) add(c.key, c.label, c.headers, c.url);
   if (isObject(plugin) && Array.isArray(plugin.accounts)) {
     plugin.accounts
       .filter((a) => isObject(a) && a.enabled !== false)

@@ -7,6 +7,7 @@
 // each provider's result or error. No token, key or secret is ever printed.
 
 import { readText, exists } from "./src/lib/io.js";
+import * as opencodeDb from "./src/lib/opencode_db.js";
 import { claudeCredentials, codexAuth, museAuth, opencodeAuth } from "./src/lib/paths.js";
 import { readGeneric } from "./src/lib/keyring.js";
 import * as registry from "./src/providers/registry.js";
@@ -44,6 +45,19 @@ async function file(label, path, extra) {
   }
   console.log(`  shape: ${shape(root)}`);
   extra?.(root);
+}
+
+console.log(`\n## opencode.db\n  path: ${opencodeDb.dbPath()}`);
+if (!(await exists(opencodeDb.dbPath()))) {
+  console.log("  exists: no");
+} else {
+  for (const id of ["opencode", "opencode-go", "anthropic", "openai", "xai", "google"]) {
+    const rows = await opencodeDb.credentials(id);
+    for (const r of rows) {
+      console.log(`  ${id} (${r.label ?? "unlabelled"}, active=${r.active}): ${shape(r.value)}`);
+      if (r.value?.expires) console.log("    " + expiry("expires", r.value.expires));
+    }
+  }
 }
 
 await file("opencode auth.json", opencodeAuth(), (root) => {

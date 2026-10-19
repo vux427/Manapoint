@@ -86,7 +86,7 @@ describe("collectRoutes", () => {
 });
 
 describe("opencode accounts", () => {
-  it("reads the Go key, the console/Zen key and the multi-auth plugin, deduplicated", () => {
+  it("prioritises opencode.db console/Go logins ahead of legacy auth.json and plugin, deduplicated", () => {
     const auth = { "opencode-go": { type: "api", key: "k1" }, opencode: { type: "api", key: "k2" }, xai: {} };
     const plugin = { version: 1, accounts: [
       { apiKey: "k1", label: "dup", enabled: true },
@@ -95,8 +95,17 @@ describe("opencode accounts", () => {
       { apiKey: "k5" },
     ] };
     const out = accountsFrom(auth, plugin, [{ key: "k6", label: "Acme", headers: { "x-opencode-org-id": "org" } }]);
-    assert.deepEqual(out.map((a) => [a.key, a.label]), [["k1", "Go"], ["k2", "Zen"], ["k6", "Acme"], ["k3", "work"], ["k5", "帳號 5"]]);
-    assert.deepEqual(out[2].headers, { "x-opencode-org-id": "org" });
+    assert.deepEqual(out.map((a) => [a.key, a.label]), [["k6", "Acme"], ["k1", "Go"], ["k2", "Zen"], ["k3", "work"], ["k5", "帳號 5"]]);
+    assert.deepEqual(out[0].headers, { "x-opencode-org-id": "org" });
+  });
+
+  it("preserves a console error route ahead of an expired auth.json key instead of swallowing it", async () => {
+    const auth = { "opencode-go": { type: "api", key: "expired-key" } };
+    const out = accountsFrom(auth, null, [{ error: transient("console 連線逾時"), label: "Console" }]);
+    assert.equal(out.length, 2);
+    assert.equal(out[0].label, "Console");
+    assert.equal(out[0].error.message, "console 連線逾時");
+    assert.equal(out[1].key, "expired-key");
   });
 
   it("a console/Zen login alone is enough", () => {
