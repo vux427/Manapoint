@@ -75,12 +75,48 @@ Manapoint 只讀各家 CLI 已經存在本機的登入狀態，並對各家官�
 - Muse Code：讀取 `muse login` 的本機登入，顯示 5 小時與每週額度；可在設定頁啟用。Meta 未回傳用量時顯示說明，登入失效時提示重新登入
 - 用量提醒：任一額度超過 80%、95% 或用滿後重置時發系統通知（設定頁可關）
 - 用量歷史：預設每 5 分鐘儲存各服務與帳號的額度，設定可調整為 1～1440 分鐘；只保留最近 7 天，可從面板或托盤右鍵選單查閱、篩選剩餘額度（程式執行時才會記錄）
-- 耗用速度預估：依最近一天的用量推算，照這速度會在重置前用完時，滑鼠停留會顯示預估用完時間（僅供參考）
-- Herdr 終端內嵌：在 [Herdr](https://herdr.dev) 桌面終端底部狀態列直接顯示各家 AI 訂閱額度，滑鼠停留看預估與倒數，點擊彈出完整面板；無介面時亦可透過獨立 CLI 取數，見 `herdr-mod/`
+- Herdr 終端內嵌：在 [Herdr](https://herdr.dev) 桌面終端底部狀態列直接顯示各家 AI 訂閱額度與官方向量 Logo，點擊彈出完整面板（含用量歷史與提供者切換），支援獨立 CLI 取數，見 [Herdr Desktop 內嵌版](#herdr-desktop-內嵌版mod)
 - 鍵盤 LCD：在 iCUE 有 LCD 的鍵盤（VANGUARD 96 等）上顯示用量，見 `manapoint/icue-widget/`（需 Manapoint 在本機執行，提供 loopback 唯讀端點）
 - 右鍵選單可最小化到托盤；托盤圖示依最緊的額度變黃或紅，滑鼠停上去列出各家用量
 - 自動更新：每天檢查 GitHub 上的新版本，有新版時右鍵選單會多出「更新到 x.y.z」，點了就下載、驗證並重啟
 - 可設定開機自動啟動
+
+## Herdr Desktop 內嵌版（Mod）
+
+如果你使用 [Herdr](https://herdr.dev) 桌面終端，可以把 Manapoint 的六家 AI 訂閱額度直接內嵌在 Herdr 底部狀態列中：
+
+- **底部狀態列品牌 Logo 即時指示**：顯示各家官方向量 Logo（Claude、OpenAI、Grok、OpenCode、Muse、Gemini、Antigravity）與最緊用量百分比。
+- **三段色彩預警**：綠色（<60% 充裕）、黃色（60%～84% 偏高）、紅色（≥85% 緊繃）。
+- **滑鼠停留即時預覽（Tooltip）**：查看各家所有窗口（5H、WEEK、MONTH）與重置倒數時間。
+- **點擊彈出多功能管理面板**：
+  1. **📊 用量**：即時進度條、重置倒數、獨立帳號與多模型分組（如 Antigravity Argon）。
+  2. **📜 歷史**：完整用量歷史紀錄，支援 24 小時 / 3 天 / 7 天範圍、Provider 標籤篩選與分頁。
+  3. **⚙ 設定**：自由勾選要在 Herdr 底部狀態列顯示或隱藏哪些 AI Provider。
+- **雙模式運作**：
+  - 若 `Manapoint.exe` 正在執行，自動透過本機 loopback API 高速讀取（<10ms）。
+  - 若 `Manapoint.exe` 未啟動，Mod 內建的 `manapoint-cli.exe` 會在背景直接讀取本機各 CLI 登入憑證與 API，不需要常駐桌面視窗！
+
+### 安裝方式
+
+在 Windows PowerShell 中執行一鍵安裝指令（無論是否下載過原始碼皆可直接安裝）：
+
+```powershell
+irm https://raw.githubusercontent.com/vux427/Manapoint/master/herdr-mod/install.ps1 | iex
+```
+
+若已 clone 本儲存庫，也可以直接執行本地腳本：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\herdr-mod\install.ps1
+```
+
+安裝腳本會自動將模組與佈局安裝至 `~/.config/herdr-app/`，並自動將 Herdr 視窗切換至 `manapoint` 佈局。
+
+### 切換佈局（Layout）
+
+隨時可以在 Herdr 視窗中：
+- 按快捷鍵 `Ctrl+Shift+L` 在各佈局間輪替切換。
+- 或按 `Ctrl+Shift+P` 開啟命令選擇區，輸入 `layout.switch` 並選擇 `manapoint`。
 
 ## 建置與測試
 

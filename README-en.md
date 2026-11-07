@@ -90,11 +90,9 @@ The other themes give each provider its own column, header on top:
   (configurable from 1 to 1440 minutes), retaining only the last 7 days. View and
   filter remaining quota from the panel or tray context menu; recording runs while
   the app is open.
-- Burn-rate projection: from the last day's samples, hovering a meter shows when it
-  would empty at this pace, if before its reset (reference only)
 - Herdr Terminal Embedded: embed AI subscription usage directly in [Herdr](https://herdr.dev)
-  desktop status bar with real-time pills, hover countdowns, and popup cards; supports both
-  app feed and headless CLI modes, see `herdr-mod/`
+  desktop status bar with official brand icons, hover countdowns, and full popup panel (including history and provider toggles); supports both
+  app feed and headless CLI modes, see [Herdr Desktop Mod](#herdr-desktop-mod)
 - Keyboard LCD: show usage on an iCUE LCD keyboard (VANGUARD 96 etc.), see
   `manapoint/icue-widget/` (needs Manapoint running locally for its loopback endpoint)
 - Minimise to the tray from the context menu; the tray icon turns amber or red with the
@@ -102,6 +100,43 @@ The other themes give each provider its own column, header on top:
 - Auto-update: checks GitHub for a new release daily; the context menu then offers
   "更新到 x.y.z", which downloads, verifies and restarts
 - Optional start-at-login
+
+## Herdr Desktop Mod
+
+If you use the [Herdr](https://herdr.dev) desktop terminal, you can embed Manapoint's AI quotas directly into Herdr's bottom status bar:
+
+- **Status Bar Brand Logos**: Official SVG logos (Claude, OpenAI, Grok, OpenCode, Muse, Gemini, Antigravity) with tightest usage percentage.
+- **Three-Tier Warning Colors**: Green (<60%), Amber (60%–84%), Red (≥85%).
+- **Hover Tooltips**: Inspect all windows (5H, WEEK, MONTH) and reset countdowns.
+- **Clickable Multi-Tab Popup**:
+  1. **📊 Usage**: Real-time progress bars, reset countdowns, independent accounts and grouped sub-models (like Antigravity Argon).
+  2. **📜 History**: Full usage history tab with 24h / 3d / 7d range filters, provider tags, and pagination.
+  3. **⚙ Settings**: Toggle visibility of AI providers directly from the Herdr interface.
+- **Dual-Mode Operation**:
+  - Automatically reads from local loopback API when `Manapoint.exe` is running (<10ms).
+  - Falls back to built-in `manapoint-cli.exe` in headless mode when `Manapoint.exe` is closed.
+
+### Installation
+
+Run this one-liner in Windows PowerShell (no git clone required):
+
+```powershell
+irm https://raw.githubusercontent.com/vux427/Manapoint/master/herdr-mod/install.ps1 | iex
+```
+
+Or from a local clone of this repository:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\herdr-mod\install.ps1
+```
+
+The installer copies the mods and layout to `~/.config/herdr-app/` and switches Herdr to the `manapoint` layout automatically.
+
+### Switching Layouts
+
+In Herdr, you can switch layouts anytime:
+- Press `Ctrl+Shift+L` to cycle through available layouts.
+- Or press `Ctrl+Shift+P`, type `layout.switch`, and select `manapoint`.
 
 ## Build and test
 

@@ -22,10 +22,20 @@
 
 ## 安裝
 
-在 PowerShell 中執行：
+### 方式一：PowerShell 一鍵安裝（無需 clone）
+
+在 Windows PowerShell 中執行：
 
 ```powershell
-pwsh -File .\herdr-mod\install.ps1
+irm https://raw.githubusercontent.com/vux427/Manapoint/master/herdr-mod/install.ps1 | iex
+```
+
+### 方式二：從原始碼安裝
+
+在本地儲存庫的 PowerShell 中執行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\herdr-mod\install.ps1
 ```
 
 腳本會自動將模組與佈局安裝至 `~/.config/herdr-app/`，並自動切換 Herdr 視窗至 `manapoint` 佈局。
