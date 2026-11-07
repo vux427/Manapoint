@@ -82,6 +82,9 @@ $stage = Join-Path $env:TEMP "manapoint-release-$PID\Manapoint"
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 try {
     Copy-Item (Join-Path $built 'Manapoint.exe'), $launcher $stage
+    if (Test-Path (Join-Path $repo 'herdr-mod')) {
+        Copy-Item (Join-Path $repo 'herdr-mod') $stage -Recurse
+    }
     if (Test-Path $zip) { Remove-Item $zip }
     Compress-Archive -Path $stage -DestinationPath $zip
 } finally { Remove-Item -Recurse -Force (Split-Path $stage) }

@@ -404,6 +404,8 @@ const panelMenu = () => [
   { id: "refresh", label: "重新整理" },
   { id: "history", label: "用量歷史…" },
   { separator: true },
+  { id: "install_herdr", label: "安裝 Herdr 內嵌版…" },
+  { separator: true },
   { id: "minimize", label: "最小化" },
   { id: "settings", label: "設定…" },
   { separator: true },
@@ -414,6 +416,7 @@ const trayMenu = () => [
   ...updateItems(),
   { id: "show", label: "顯示面板" },
   { id: "history", label: "用量歷史…" },
+  { id: "install_herdr", label: "安裝 Herdr 內嵌版…" },
   { id: "settings", label: "設定…" },
   { separator: true },
   { id: "quit", label: "結束" },
@@ -474,6 +477,9 @@ async function handleMenu(id) {
     case "history":
       tiny.win.open("history", { page: "history.html", title: "Manapoint 用量歷史", size: "920x640" });
       break;
+    case "install_herdr":
+      await installHerdrMod();
+      break;
     case "refresh":
       cards = await call("refresh");
       render();
@@ -510,6 +516,27 @@ async function installUpdate() {
     reportFailure(err);
   } finally {
     installing = false;
+  }
+}
+
+let installingHerdr = false;
+
+async function installHerdrMod() {
+  if (installingHerdr) return;
+  installingHerdr = true;
+  tiny.notify("Manapoint", "正在安裝 Herdr 內嵌版模組，請稍候…");
+  try {
+    const res = await call("install_herdr_mod");
+    if (res && res.ok) {
+      tiny.notify("Manapoint", "Herdr 內嵌版安裝完成！已將 Herdr 切換至 manapoint 佈局。");
+    } else {
+      tiny.notify("Manapoint", "Herdr 模組安裝失敗：" + (res?.error ?? "未知錯誤"));
+    }
+  } catch (err) {
+    tiny.notify("Manapoint", "Herdr 模組安裝失敗：" + (err?.message ?? err));
+    reportFailure(err);
+  } finally {
+    installingHerdr = false;
   }
 }
 

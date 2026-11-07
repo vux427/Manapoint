@@ -236,6 +236,10 @@ const handlers = {
     }
     return true;
   },
+  async install_herdr_mod() {
+    const herdrInstall = await import("./lib/herdr_install.js");
+    return herdrInstall.installHerdrMod((argv, opts) => state.app.spawnHidden(argv, opts));
+  },
   set_alerts: ({ enabled }) => updateSettings((s) => (s.alerts = Boolean(enabled))),
   set_visible_windows: async ({ id, kinds }) => {
     const updated = await updateSettings((s) => {
