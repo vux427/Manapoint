@@ -3,7 +3,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { payload, portFromEnv, route, DEFAULT_PORT } from "../src/lib/local_api.js";
+import { payload, fullPayload, portFromEnv, route, DEFAULT_PORT } from "../src/lib/local_api.js";
 
 const card = {
   id: "codex",
@@ -45,6 +45,23 @@ describe("payload", () => {
   });
 });
 
+describe("fullPayload", () => {
+  it("preserves account and quotaGroup for companions", () => {
+    const cardWithExtra = {
+      id: "antigravity-gemini",
+      name: "Antigravity Gemini",
+      windows: [
+        { kind: "Weekly", percent: 45, resetsAt: "2026-11-09T00:00:00Z", quotaGroup: "Argon", account: "work", projected: 90, runsOutAt: "2026-11-08T12:00:00Z" }
+      ]
+    };
+    const p = fullPayload([cardWithExtra], Date.UTC(2026, 8, 20));
+    assert.equal(p.cards[0].windows[0].quotaGroup, "Argon");
+    assert.equal(p.cards[0].windows[0].account, "work");
+    assert.equal(p.cards[0].windows[0].projected, undefined);
+    assert.equal(p.cards[0].windows[0].runsOutAt, undefined);
+  });
+});
+
 describe("route", () => {
   it("serves the payload as JSON with CORS headers", () => {
     const r = route("GET", "/v1/usage", [card]);
@@ -52,6 +69,22 @@ describe("route", () => {
     assert.equal(r.headers["Access-Control-Allow-Origin"], "*");
     assert.match(r.headers["Content-Type"], /application\/json/);
     assert.equal(JSON.parse(r.body).cards[0].id, "codex");
+  });
+
+  it("serves full cards on /v1/cards", () => {
+    const r = route("GET", "/v1/cards", [card]);
+    assert.equal(r.status, 200);
+    const body = JSON.parse(r.body);
+    assert.equal(body.source, "app");
+    assert.equal(body.cards[0].id, "codex");
+  });
+
+  it("serves history on /v1/history", () => {
+    const r = route("GET", "/v1/history", [], Date.now(), [], () => [{ timestamp: 12345, cards: [] }]);
+    assert.equal(r.status, 200);
+    const body = JSON.parse(r.body);
+    assert.equal(body.ok, true);
+    assert.equal(body.history[0].timestamp, 12345);
   });
 
   it("answers preflight, health and misses", () => {

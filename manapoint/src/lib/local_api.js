@@ -42,8 +42,37 @@ export function payload(cards, now = Date.now()) {
   };
 }
 
-/** Pure routing: { status, headers, body } for any method + path. */
-export function route(method, path, cards, now = Date.now()) {
+/**
+ * Cards as the panel itself shows them → the richer feed for panel-like companions
+ * (the Herdr status bar): every window field the panel uses survives — account
+ * and quotaGroup. Still only percentages, times and messages; never a credential.
+ * New objects only.
+ */
+export function fullPayload(cards, now = Date.now()) {
+  return {
+    app: "manapoint",
+    version: 1,
+    updatedAt: new Date(now).toISOString(),
+    cards: (cards ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      badge: c.badge ?? null,
+      note: c.note ?? null,
+      error: c.error ?? null,
+      windows: (c.windows ?? []).map((w) => ({
+        kind: w.kind,
+        percent: w.percent,
+        resetsAt: w.resetsAt ?? null,
+        ...(typeof w.quotaGroup === "string" ? { quotaGroup: w.quotaGroup } : {}),
+        ...(typeof w.account === "string" ? { account: w.account } : {}),
+      })),
+    })),
+  };
+}
+
+/** Pure routing: { status, headers, body } for any method + path. `panelCards`
+ * (default: `cards`) are the panel's narrowed cards, served on /v1/cards. */
+export function route(method, path, cards, now = Date.now(), panelCards = cards, getHistory = () => []) {
   if (method === "OPTIONS") return { status: 204, headers: { ...CORS }, body: "" };
   if (method !== "GET") {
     return { status: 405, headers: { ...CORS, "Content-Type": JSON_TYPE }, body: '{"error":"method not allowed"}' };
@@ -55,8 +84,23 @@ export function route(method, path, cards, now = Date.now()) {
       body: JSON.stringify(payload(cards, now)),
     };
   }
+  if (path === "/v1/cards") {
+    return {
+      status: 200,
+      headers: { ...CORS, "Content-Type": JSON_TYPE },
+      body: JSON.stringify({ ...fullPayload(panelCards, now), source: "app" }),
+    };
+  }
+  if (path === "/v1/history") {
+    const list = typeof getHistory === "function" ? getHistory() : (Array.isArray(getHistory) ? getHistory : []);
+    return {
+      status: 200,
+      headers: { ...CORS, "Content-Type": JSON_TYPE },
+      body: JSON.stringify({ ok: true, history: list }),
+    };
+  }
   if (path === "/" || path === "/v1") {
-    return { status: 200, headers: { ...CORS, "Content-Type": "text/plain" }, body: "manapoint local api: GET /v1/usage" };
+    return { status: 200, headers: { ...CORS, "Content-Type": "text/plain" }, body: "manapoint local api: GET /v1/usage, GET /v1/cards, GET /v1/history" };
   }
   return { status: 404, headers: { ...CORS, "Content-Type": JSON_TYPE }, body: '{"error":"not found"}' };
 }
@@ -68,8 +112,9 @@ export function portFromEnv(env) {
   return Number.isInteger(raw) && raw > 0 && raw < 65536 ? raw : DEFAULT_PORT;
 }
 
-/** Start the loopback server; returns the server or null when off. */
-export function start(getCards, env, log = () => {}) {
+/** Start the loopback server; returns the server or null when off. `getPanelCards`
+ * (default: `getCards`) feeds /v1/cards; `getHistory` feeds /v1/history. */
+export function start(getCards, env, log = () => {}, getPanelCards = getCards, getHistory = () => []) {
   const port = portFromEnv(env);
   const serve = globalThis.tjs?.serve;
   if (port === null || typeof serve !== "function") return null;
@@ -78,7 +123,15 @@ export function start(getCards, env, log = () => {}) {
       listenIp: LOOPBACK,
       port,
       fetch: async (req) => {
-        const r = route(req.method, new URL(req.url).pathname, getCards());
+        const path = new URL(req.url).pathname;
+        const r = route(
+          req.method,
+          path,
+          getCards(),
+          Date.now(),
+          path === "/v1/cards" ? getPanelCards() : undefined,
+          getHistory
+        );
         // 204 must carry a null body or the Response constructor throws.
         return new Response(r.status === 204 ? null : r.body, { status: r.status, headers: r.headers });
       },

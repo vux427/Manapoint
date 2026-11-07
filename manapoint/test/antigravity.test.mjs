@@ -115,13 +115,25 @@ describe("Antigravity host fallback and shared cache", () => {
       assert.equal(gemini.windows.length, 3);
       assert.equal(thirdParty.windows.length, 2);
       assert.deepEqual(calls.map((c) => new URL(c.url).host), [
-        "cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
+        "daily-cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
       ]);
       assert.deepEqual(calls.map((c) => c.headers["User-Agent"]), [
-        "antigravity/cli/1.3.6 windows/amd64", "antigravity/cli/1.3.6 windows/amd64",
+        "antigravity/cli/1.3.6 windows/amd64", "antigravity/hub/2.9.1 windows/amd64",
       ]);
       await collect(POOLS.gemini);
       assert.equal(calls.length, 2);
+    });
+  });
+
+  it("takes all pools including Argon from the daily host in a single request", async () => {
+    await withRuntime([{ body: summary() }], async (calls) => {
+      const [gemini, thirdParty] = await Promise.all([collect(POOLS.gemini), collect(POOLS.thirdParty)]);
+      assert.equal(gemini.windows.length, 3);
+      assert.equal(thirdParty.windows.length, 2);
+      assert.deepEqual(calls.map((c) => new URL(c.url).host), [
+        "daily-cloudcode-pa.googleapis.com",
+      ]);
+      assert.equal(calls.length, 1);
     });
   });
 
@@ -150,26 +162,26 @@ describe("Antigravity host fallback and shared cache", () => {
     });
   });
 
-  it("takes Gemini from the plain host and grafts Argon on from the daily host", async () => {
+  it("takes Gemini from the plain host and grafts Argon on from the daily host when daily fails", async () => {
     const full = summary();
     const plain = { groups: full.groups.filter((g) => !/argon/i.test(g.displayName)) };
     const daily = { groups: [full.groups[2]] };
-    await withRuntime([{ body: plain }, { body: daily }], async (calls) => {
+    await withRuntime([{ status: 500, body: {} }, { status: 500, body: {} }, { body: plain }, { body: daily }], async (calls) => {
       const gemini = await collect(POOLS.gemini);
       assert.deepEqual(gemini.windows.map((w) => w.quotaGroup), [undefined, undefined, "Argon"]);
       assert.equal(gemini.windows[2].percent > 0.5 && gemini.windows[2].percent < 0.7, true);
       assert.deepEqual(calls.map((c) => new URL(c.url).host), [
-        "cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
+        "daily-cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com", "cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com",
       ]);
       await collect(POOLS.thirdParty);
-      assert.equal(calls.length, 2, "the sibling card reuses the merged summary");
+      assert.equal(calls.length, 4, "the sibling card reuses the merged summary");
     });
   });
 
   it("keeps the base reading when the Argon request fails", async () => {
     const full = summary();
     const plain = { groups: full.groups.filter((g) => !/argon/i.test(g.displayName)) };
-    await withRuntime([{ body: plain }, { status: 500, body: {} }], async () => {
+    await withRuntime([{ status: 500, body: {} }, { status: 500, body: {} }, { body: plain }, { status: 500, body: {} }], async () => {
       const gemini = await collect(POOLS.gemini);
       assert.equal(gemini.windows.length, 2);
     });

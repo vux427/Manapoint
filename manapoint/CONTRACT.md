@@ -16,7 +16,9 @@ manapoint/
   diagnose.js            <- safe-to-paste diagnostics (no secrets printed)
   icon.png               <- app icon (tinyjs.json "icon")
   icue-widget/           <- iCUE LCD companion; reads the loopback feed of src/lib/local_api.js
+  ../herdr-mod/          <- Herdr desktop embedded companion mod (status bar + popup); reads /v1/cards or runs src/cli.js
   src/
+    cli.js               <- headless CLI collector for companions (tjs run src/cli.js)
     main.js              <- backend entry: tiny.api handlers + polling (owner)
     lib/                 <- backend: pure shared rules, plus the IO modules io, keyring, opencode_db, local_api, relaunch
     providers/           <- backend: registry.js (ids, badges, order; register providers here), model.js, one collector (+ token module) per vendor

@@ -316,9 +316,10 @@ export async function init(app) {
   await ready;
   pushCards();
   // Read-only loopback feed for companions (the iCUE LCD widget): full cards,
-  // never narrowed — the widget has its own switches. Never blocks startup
-  // when the port is taken.
-  localApi.start(() => full(), env, (m) => console.log(m));
+  // never narrowed — the widget has its own switches. /v1/cards serves the panel's
+  // own view (narrowed, with accounts and projections) for the Herdr status bar.
+  // Never blocks startup when the port is taken.
+  localApi.start(() => full(), env, (m) => console.log(m), () => view(), () => state.usageHistory);
 
   try {
     await recordUsage();

@@ -29,15 +29,15 @@ export const POOLS = {
 };
 
 /**
- * Which host and client string answers with what (measured 2026-10-16 against the
- * `/usage` screen of agy 1.3.6, which is the ground truth for the numbers):
- *   - the plain host carries the real Gemini and Claude/GPT figures but never an
- *     Argon group; the `daily-` host reports Gemini as a flat 1.0 here;
- *   - the `daily-` host adds the `Gemini 4 Argon` group only for the CLI's own client
- *     string, and drops the Gemini group for a bare `antigravity` agent.
- * So the base reading comes from the plain host and Argon is grafted on from the
- * `daily-` host (see `withArgon`). The weaker pairings stay as fallbacks for the day
- * a client string stops being accepted.
+ * Which host and client string answers with what:
+ *   - The `daily-` host with the CLI's own client string (`antigravity/cli/1.3.6 windows/amd64`)
+ *     returns real-time live usage for Gemini Models (both 5-hour and weekly limits),
+ *     Claude and GPT models, and Gemini 4 Argon in a single request. This matches
+ *     the ground-truth `/usage` display of `agy`.
+ *   - The plain host (`cloudcode-pa.googleapis.com`) can return flat 1.0 (0% used) for
+ *     Gemini 5-hour limit, stale weekly numbers, and no Argon group.
+ * So the primary query goes to the `daily-` host with the CLI agent. Weaker pairings
+ * and the plain host remain as fallbacks.
  */
 const PLAIN_HOST = "https://cloudcode-pa.googleapis.com";
 const DAILY_HOST = "https://daily-cloudcode-pa.googleapis.com";
@@ -45,9 +45,9 @@ const CLI_AGENT = "antigravity/cli/1.3.6 windows/amd64";
 const HUB_AGENT = "antigravity/hub/2.9.1 windows/amd64";
 const ARGON_ATTEMPT = { host: DAILY_HOST, agent: CLI_AGENT };
 const ATTEMPTS = [
-  { host: PLAIN_HOST, agent: CLI_AGENT },
   ARGON_ATTEMPT,
   { host: DAILY_HOST, agent: HUB_AGENT },
+  { host: PLAIN_HOST, agent: CLI_AGENT },
 ];
 const SUMMARY_PATH = "/v1internal:retrieveUserQuotaSummary";
 

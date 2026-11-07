@@ -1,0 +1,5 @@
+{
+  "place": "none",
+  "title": "Manapoint Details",
+  "overlay": { "kind": "popup", "width": 480, "height": 580 }
+}

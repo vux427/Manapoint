@@ -92,6 +92,9 @@ The other themes give each provider its own column, header on top:
   the app is open.
 - Burn-rate projection: from the last day's samples, hovering a meter shows when it
   would empty at this pace, if before its reset (reference only)
+- Herdr Terminal Embedded: embed AI subscription usage directly in [Herdr](https://herdr.dev)
+  desktop status bar with real-time pills, hover countdowns, and popup cards; supports both
+  app feed and headless CLI modes, see `herdr-mod/`
 - Keyboard LCD: show usage on an iCUE LCD keyboard (VANGUARD 96 etc.), see
   `manapoint/icue-widget/` (needs Manapoint running locally for its loopback endpoint)
 - Minimise to the tray from the context menu; the tray icon turns amber or red with the
