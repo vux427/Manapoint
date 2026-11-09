@@ -8,7 +8,7 @@
 六家 AI 訂閱的用量，一個懸浮小面板全看到。
 
 Manapoint 是用 [tinyjs](https://tinyjs.app) 寫的桌面小工具（前後端都是 JavaScript），常駐顯示
-opencode Go、Claude Code、Codex、Grok、Antigravity、Muse Code（Meta）的用量窗口（5 小時 / 每週 / 每月），
+opencode Go、Claude Code、Codex、Grok、Antigravity、Muse Code（Meta）、Cursor 的用量窗口（5 小時 / 每週 / 每月），
 右鍵可重新整理、開設定、結束。
 
 ## 下載
@@ -73,6 +73,7 @@ Manapoint 只讀各家 CLI 已經存在本機的登入狀態，並對各家官�
 - Antigravity Gemini：共用池與 Gemini 4 Argon 週額度合併在同一張卡分組顯示；精簡主題維持單列
 - 取數失敗時顯示原因並保留上次數字，不靜默隱藏
 - Muse Code：讀取 `muse login` 的本機登入，顯示 5 小時與每週額度；可在設定頁啟用。Meta 未回傳用量時顯示說明，登入失效時提示重新登入
+- Cursor：讀取 Cursor CLI 或桌面程式的本機登入，顯示每月訂閱已用比例與帳期重置倒數；支援多帳號與 Auto/API 分池。既有使用者請在設定頁勾選 Cursor。介面依上游與合成回應驗證，尚未以真實訂閱帳號實測
 - 用量提醒：任一額度超過 80%、95% 或用滿後重置時發系統通知（設定頁可關）
 - 用量歷史：預設每 5 分鐘儲存各服務與帳號的額度，設定可調整為 1～1440 分鐘；只保留最近 7 天，可從面板或托盤右鍵選單查閱、篩選剩餘額度（程式執行時才會記錄）
 - Herdr 終端內嵌：在 [Herdr](https://herdr.dev) 桌面終端底部狀態列直接顯示各家 AI 訂閱額度與官方向量 Logo，點擊彈出完整面板（含用量歷史與提供者切換），支援獨立 CLI 取數，見 [Herdr Desktop 內嵌版](#herdr-desktop-內嵌版mod)
@@ -85,7 +86,7 @@ Manapoint 只讀各家 CLI 已經存在本機的登入狀態，並對各家官�
 
 如果你使用 [Herdr](https://herdr.dev) 桌面終端，可以把 Manapoint 的六家 AI 訂閱額度直接內嵌在 Herdr 底部狀態列中：
 
-- **底部狀態列品牌 Logo 即時指示**：顯示各家官方向量 Logo（Claude、OpenAI、Grok、OpenCode、Muse、Gemini、Antigravity）與最緊用量百分比。
+- **底部狀態列品牌 Logo 即時指示**：顯示各家官方向量 Logo（Claude、OpenAI、Grok、OpenCode、Muse、Cursor、Gemini、Antigravity）與最緊用量百分比。
 - **三段色彩預警**：綠色（<60% 充裕）、黃色（60%～84% 偏高）、紅色（≥85% 緊繃）。
 - **滑鼠停留即時預覽（Tooltip）**：查看各家所有窗口（5H、WEEK、MONTH）與重置倒數時間。
 - **點擊彈出多功能管理面板**：

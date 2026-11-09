@@ -8,7 +8,7 @@
 
 import { readText, exists } from "./src/lib/io.js";
 import * as opencodeDb from "./src/lib/opencode_db.js";
-import { claudeCredentials, codexAuth, museAuth, opencodeAuth } from "./src/lib/paths.js";
+import { claudeCredentials, codexAuth, cursorAuthPaths, cursorStateDb, museAuth, opencodeAuth } from "./src/lib/paths.js";
 import { readGeneric } from "./src/lib/keyring.js";
 import * as registry from "./src/providers/registry.js";
 
@@ -69,6 +69,8 @@ await file("Claude .credentials.json", claudeCredentials(), (root) => {
 });
 await file("Codex auth.json", codexAuth());
 await file("Muse Code auth.json", museAuth());
+for (const path of cursorAuthPaths()) await file("Cursor CLI login", path);
+console.log(`\n## Cursor desktop login\n  database exists: ${await exists(cursorStateDb())}`);
 
 console.log("\n## Antigravity keyring (gemini:antigravity)");
 try {

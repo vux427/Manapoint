@@ -25,6 +25,7 @@ const ALL_PROVIDERS = [
   { id: "antigravity-gemini", name: "Antigravity Gemini", icon: "mods/manapoint-popup/icons/gemini.svg", bg: "#4285F4", fg: "#FFFFFF" },
   { id: "antigravity-3p", name: "Antigravity Claude/GPT", icon: "mods/manapoint-popup/icons/antigravity.svg", bg: "#4285F4", fg: "#FFFFFF" },
   { id: "muse-code", name: "Muse Code", icon: "mods/manapoint-popup/icons/muse.svg", bg: "#0866FF", fg: "#FFFFFF" },
+  { id: "cursor", name: "Cursor", icon: "mods/manapoint-popup/icons/cursor.svg", bg: "#14120B", fg: "#FFFFFF" },
   { id: "opencode-go", name: "opencode Go", icon: "mods/manapoint-popup/icons/opencode.svg", bg: "#F2F2F2", fg: "#16181C" },
 ];
 

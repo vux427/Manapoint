@@ -55,8 +55,8 @@ String enum, exactly three values: `"Rolling"` | `"Weekly"` | `"Monthly"`.
 
 `percent` is a float 0–100. `resetsAt` is an RFC 3339 string or `null`.
 
-`quotaGroup?: string` identifies an additional independent model pool within one
-card (currently `"Argon"` on `antigravity-gemini`). Untagged windows retain their
+`quotaGroup?: string` identifies an additional independent quota pool within one
+card (`"Argon"` on `antigravity-gemini`; `"Auto"`, `"API"` or `"團隊共用"` on `cursor`). Untagged windows retain their
 existing identity. A weekly Argon window and an untagged weekly window are distinct;
 deduplication, alerts, trends, archives and companion payloads preserve this field.
 The `account` dimension remains independent of the model pool.
@@ -89,7 +89,7 @@ reset. Both are absent when there is no rising trend or no `resetsAt`.
 render `badge.text` instead.
 
 Provider ids are fixed: `opencode-go`, `claude-code`, `codex`, `grok`,
-`antigravity-gemini`, `antigravity-3p`, `muse-code`. The two Antigravity ids are one subscription
+`antigravity-gemini`, `antigravity-3p`, `muse-code`, `cursor`. The two Antigravity ids are one subscription
 with independent quota pools. Gemini's base pool and Argon share the Gemini card;
 Claude/GPT retains its own card. Both cards share one badge.
 

@@ -8,7 +8,7 @@
 Six AI subscriptions, one floating panel.
 
 Manapoint is a desktop widget built with [tinyjs](https://tinyjs.app) — JavaScript on both
-sides — that keeps opencode Go, Claude Code, Codex, Grok, Antigravity and Meta Muse Code usage windows
+sides — that keeps opencode Go, Claude Code, Codex, Grok, Antigravity, Meta Muse Code and Cursor usage windows
 (5-hour / weekly / monthly) on screen. Right-click to refresh, open settings, or quit.
 
 ## Download
@@ -69,6 +69,7 @@ The other themes give each provider its own column, header on top:
 ## Features
 
 - Muse Code: reads the local `muse login` credential and shows five-hour and weekly quota. Enable it in settings; missing quota and expired logins get explicit messages.
+- Cursor: reads local Cursor CLI or desktop sign-in and shows monthly subscription usage and the billing reset, with multiple accounts and separate Auto/API pools when reported. Existing users can enable Cursor in settings. Validated against upstream sources and synthetic responses; not yet verified with a live subscription.
 - Reads the login state your CLIs already have. No API key required, supported OAuth tokens are
   refreshed automatically, and no credential is ever written out
 - Five panel themes: Graphite, Vitals, Terminal, Compact, Paper
@@ -105,7 +106,7 @@ The other themes give each provider its own column, header on top:
 
 If you use the [Herdr](https://herdr.dev) desktop terminal, you can embed Manapoint's AI quotas directly into Herdr's bottom status bar:
 
-- **Status Bar Brand Logos**: Official SVG logos (Claude, OpenAI, Grok, OpenCode, Muse, Gemini, Antigravity) with tightest usage percentage.
+- **Status Bar Brand Logos**: Official SVG logos (Claude, OpenAI, Grok, OpenCode, Muse, Cursor, Gemini, Antigravity) with tightest usage percentage.
 - **Three-Tier Warning Colors**: Green (<60%), Amber (60%–84%), Red (≥85%).
 - **Hover Tooltips**: Inspect all windows (5H, WEEK, MONTH) and reset countdowns.
 - **Clickable Multi-Tab Popup**:

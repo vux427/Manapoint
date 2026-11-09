@@ -63,6 +63,7 @@ export function providerShortName(id, fullName) {
     case "antigravity-gemini": return "Gemini";
     case "antigravity-3p": return "Agy 3P";
     case "muse-code": return "Muse";
+    case "cursor": return "Cursor";
     default: return fullName || id;
   }
 }
@@ -76,6 +77,7 @@ export function providerIcon(id) {
     case "antigravity-gemini": return "mods/manapoint-popup/icons/gemini.svg";
     case "antigravity-3p": return "mods/manapoint-popup/icons/antigravity.svg";
     case "muse-code": return "mods/manapoint-popup/icons/muse.svg";
+    case "cursor": return "mods/manapoint-popup/icons/cursor.svg";
     default: return null;
   }
 }
@@ -89,6 +91,7 @@ export function providerBrandColor(id) {
     case "antigravity-gemini": return "#60A5FA";
     case "antigravity-3p": return "#A78BFA";
     case "muse-code": return "#0866FF";
+    case "cursor": return "#E2E8F0";
     default: return "#94A3B8";
   }
 }

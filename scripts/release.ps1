@@ -38,6 +38,7 @@ $repo = Split-Path -Parent $PSScriptRoot
 $app = Join-Path $repo 'manapoint'
 $built = Join-Path $app 'dist'
 $tinyjs = Join-Path $env:LOCALAPPDATA 'tinyjs\tinyjs.cmd'
+$tjs = Join-Path $env:LOCALAPPDATA 'tinyjs\bin\tjs.exe'
 $version = (Get-Content (Join-Path $app 'tinyjs.json') -Raw | ConvertFrom-Json).version
 
 if (-not $SkipBuild) {
@@ -50,9 +51,55 @@ if (-not $SkipBuild) {
         Write-Host '==> tinyjs build' -ForegroundColor Cyan
         & $tinyjs build
         if ($LASTEXITCODE -ne 0) { throw "tinyjs build failed ($LASTEXITCODE)" }
+
+        # Use the same copied backend as the desktop build, with a headless entry.
+        # Plain `tjs compile` does not bundle imports; app compile includes them.
+        Write-Host '==> building Herdr standalone collector' -ForegroundColor Cyan
+        $cliBuild = Join-Path $app '.build\herdr-cli'
+        $cliApp = Join-Path $cliBuild 'app'
+        New-Item -ItemType Directory -Force $cliApp | Out-Null
+        Copy-Item (Join-Path $app '.build\app\src') (Join-Path $cliApp 'src') -Recurse
+        [IO.File]::WriteAllText((Join-Path $cliApp 'app.json'),
+            '{"version":0,"build":{},"main":"src/cli.js"}', [Text.UTF8Encoding]::new($false))
+        Push-Location $cliBuild
+        try {
+            & $tjs app compile (Join-Path $built 'manapoint-cli')
+            if ($LASTEXITCODE -ne 0) { throw "CLI compile failed ($LASTEXITCODE)" }
+        } finally { Pop-Location }
+
+        # Smoke-test the actual Windows executable against an empty, isolated
+        # profile. Missing login must produce a Cursor card without any network IO.
+        Write-Host '==> verifying Herdr standalone collector' -ForegroundColor Cyan
+        $cli = Join-Path $built 'manapoint-cli.exe'
+        $smokeProfile = Join-Path $cliBuild 'smoke-profile'
+        $savedAppData = $env:APPDATA
+        $savedUserProfile = $env:USERPROFILE
+        $savedXdgConfig = $env:XDG_CONFIG_HOME
+        $savedCursorHome = $env:CURSOR_ACP_HOME_DIR
+        try {
+            $env:APPDATA = $smokeProfile
+            $env:USERPROFILE = $smokeProfile
+            $env:XDG_CONFIG_HOME = Join-Path $smokeProfile '.config'
+            $env:CURSOR_ACP_HOME_DIR = $smokeProfile
+            $saved = & $cli --set-enabled-providers cursor | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0 -or -not $saved.ok) { throw 'CLI settings smoke test failed' }
+            $reading = & $cli --deadline 1000 | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0 -or $reading.source -ne 'cli' -or
+                @($reading.cards).Count -ne 1 -or $reading.cards[0].id -ne 'cursor' -or
+                @($reading.cards[0].windows).Count -ne 0 -or -not $reading.cards[0].error) {
+                throw 'CLI Cursor smoke test failed'
+            }
+            $history = & $cli --history | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0 -or -not $history.ok) { throw 'CLI history smoke test failed' }
+        } finally {
+            $env:APPDATA = $savedAppData
+            $env:USERPROFILE = $savedUserProfile
+            $env:XDG_CONFIG_HOME = $savedXdgConfig
+            $env:CURSOR_ACP_HOME_DIR = $savedCursorHome
+        }
     } finally { Pop-Location }
 }
-foreach ($f in 'Manapoint.exe', 'launcher.exe') {
+foreach ($f in 'Manapoint.exe', 'launcher.exe', 'manapoint-cli.exe') {
     if (-not (Test-Path (Join-Path $built $f))) { throw "missing $built\$f" }
 }
 
@@ -84,6 +131,8 @@ try {
     Copy-Item (Join-Path $built 'Manapoint.exe'), $launcher $stage
     if (Test-Path (Join-Path $repo 'herdr-mod')) {
         Copy-Item (Join-Path $repo 'herdr-mod') $stage -Recurse
+        Copy-Item (Join-Path $built 'manapoint-cli.exe') `
+            (Join-Path $stage 'herdr-mod\mods\manapoint-status\bin\manapoint-cli.exe') -Force
     }
     if (Test-Path $zip) { Remove-Item $zip }
     Compress-Archive -Path $stage -DestinationPath $zip

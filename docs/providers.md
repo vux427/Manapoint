@@ -186,6 +186,48 @@ Windows 憑證位置對照 [Meta 官方 SDK issue #38](https://github.com/meta-m
 本版本讀取 Windows／Linux 的 CLI 檔案登入，不讀 macOS Keychain，也不讀瀏覽器 cookie 或自動挑選 dev.meta.ai 的 team。
 尚未自訂啟用清單時預設顯示；既有使用者已設定清單時，請到設定頁勾選 Muse Code。
 
+## Cursor
+
+2026-11-10 對照上游實作與合成回應驗證，尚未以真實 Cursor 訂閱帳號實機驗證。
+
+- [opencode-cursor 的 auth.ts](https://github.com/Nomadcxx/opencode-cursor/blob/main/src/auth.ts) 提供 CLI 登入檔的搜尋位置；其 [usage.ts](https://github.com/Nomadcxx/opencode-cursor/blob/main/src/usage.ts) 解析的是每次生成的 token／成本，並非訂閱總額度，不能直接換算訂閱百分比
+- 訂閱介面與 session 組法另參考 [CodexBar 的 Cursor provider](https://github.com/steipete/CodexBar/tree/main/Sources/CodexBarCore/Providers/Cursor)：`CursorAppAuth.swift`、`CursorStatusProbe.swift` 與 `CursorStatusProbe+UsageSummary.swift`。本專案獨立實作，未複製其程式碼
+- CLI 憑證：`$XDG_CONFIG_HOME/cursor/`、`~/.config/cursor/`、`~/.cursor/` 中的 `cli-config.json`／`auth.json` → `accessToken`。支援 opencode-cursor 的 `CURSOR_ACP_HOME_DIR`，用於替換 CLI 搜尋的 `~`
+- 桌面憑證：Windows `%APPDATA%/Cursor/User/globalStorage/state.vscdb`，Linux `$XDG_CONFIG_HOME/Cursor/User/globalStorage/state.vscdb`（預設 `~/.config`）；以唯讀 SQLite 連線讀取 `ItemTable` 的 `cursorAuth/accessToken`
+- 桌面程式若將 token 以 `cursor-safe-storage:` 加密儲存，本版本不解密、不讀瀏覽器 cookie；請改用 `cursor-agent login` 的檔案登入。未提供 macOS Keychain 整合
+- `CURSOR_API_KEY`、OpenCode `cursor-agent`／`cursor-auth` 等佔位 key 不當成訂閱登入
+- 請求：`GET https://cursor.com/api/usage-summary`
+- 認證：由本機 access JWT 的 `sub` 取最後一段使用者 id，組成 `Cookie: WorkosCursorSessionToken=<id>%3A%3A<accessToken>`；JWT claims 僅協助分辨帳號，認證由伺服器判定
+- 每次輪詢重讀登入，不換發、不寫回。401/403 時重讀該來源一次，若 Cursor 已輪替 token 則重試；否則提示重新登入並保留上次數字。429 同樣保留數字；未知格式不畫 0%
+
+回應形狀（合成示例，已省略帳號資訊）：
+
+```json
+{
+  "billingCycleEnd": "2026-12-01T00:00:00Z",
+  "individualUsage": {
+    "plan": {
+      "enabled": true,
+      "used": 250,
+      "limit": 2000,
+      "totalPercentUsed": 12.5,
+      "autoPercentUsed": 4,
+      "apiPercentUsed": 21
+    }
+  }
+}
+```
+
+- 月用量優先取 `individualUsage.plan.totalPercentUsed`；百分比已是 0–100 單位，`0.36` 是 0.36%，不再乘 100
+- 無總百分比時用 `plan.used / plan.limit * 100`，兩者皆以美分計價；`breakdown.total` 是已用額度，不是額度上限
+- 只有 `autoPercentUsed`／`apiPercentUsed` 時各自以 `quotaGroup: Auto / API` 顯示，不能平均或加總為訂閱總百分比
+- 個人方案未提供數字時依序支援 `individualUsage.overall` 的個人上限及 `teamUsage.pooled` 的共用池；團隊池明確標成「團隊共用」，不冒充個人額度
+- 無有限上限／停用池只顯示說明；正上限卻缺少 `used`、數值變成字串或未知回應視為格式錯誤
+- `billingCycleEnd` 為可選重置時間；缺少時仍顯示有效百分比。只顯示此介面回報的每月訂閱池，不以單次推論 token、隨用隨付金額或方案售價反推額度。舊式按次數計算的方案與其他介面的週額度尚未整合
+
+快取、歷史與本機 API 僅保留用量欄位；access token、email、方案及帳單原始回應不保留，錯誤回應本文也不輸出。
+主面板、iCUE、Herdr 均可顯示 Cursor；尚未設定啟用清單時預設顯示，既有清單請到設定頁勾選 Cursor。
+
 ## Antigravity
 
 初次實機驗證（2026-09-09）；2026-10-16 補強新版回應相容處理。
@@ -343,6 +385,7 @@ Antigravity 的 endpoint 與 OAuth client 出處為 MIT 授權的
 | Codex | `~/.codex/auth.json`；opencode 的 `openai` 登入（帳號 id 取自登入或 JWT） |
 | Grok | opencode.db 的 `xai` 列；auth.json `xai`（舊版） |
 | Muse Code | Muse CLI auth.json 的 `providers.meta.access_token`（Windows／Linux 檔案登入） |
+| Cursor | Cursor CLI 的 `accessToken`；Cursor 桌面程式的唯讀 state.vscdb 登入 |
 | Antigravity | agy keyring；opencode 的 `google` 登入；opencode-antigravity-multi-auth 外掛 |
 
 opencode 代存的 OAuth 登入換發後寫回原處（opencode.db 以交易合併該列 `value`；auth.json 只動該節點），
@@ -361,7 +404,7 @@ opencode 代存的 OAuth 登入換發後寫回原處（opencode.db 以交易合�
 
 ## 憑證政策
 
-Manapoint 只讀取使用者自己機器上、由各家官方 CLI 寫下的登入狀態。
+Manapoint 只讀取使用者自己機器上、由各家官方 CLI 或 Cursor 桌面程式寫下的登入狀態。
 
 - **token 過期會自動換發。** 用各家公開的 OAuth 換發流程，只動同機同使用者、
   該 CLI 自己管理的同一個憑證檔，並處理 refresh token 輪換與並發寫入。
@@ -370,6 +413,7 @@ Manapoint 只讀取使用者自己機器上、由各家官方 CLI 寫下的登�
   Antigravity 的憑證在 OS keyring 而非檔案，換發到的 token
   只留在記憶體，不寫回 keyring（理由見上）。
   Muse Code 沒有已知的裝置 token 換發介面，登入失效時提示使用者執行 `muse login`。
+  Cursor 的登入由原程式管理，Manapoint 僅重讀、不換發或寫回，失效時提示重新登入。
 - **不要求 API key 或密碼。**
 - **不寫出 token。** 快取檔與記錄檔都不含憑證。
 

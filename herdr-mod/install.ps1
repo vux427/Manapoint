@@ -29,9 +29,18 @@ if (-not $scriptDir -or -not (Test-Path (Join-Path $scriptDir 'mods\manapoint-st
   $tempZip = Join-Path $env:TEMP "manapoint-herdr-mod-$PID.zip"
   $tempDirToClean = Join-Path $env:TEMP "manapoint-herdr-mod-$PID"
   try {
-    Invoke-WebRequest -Uri "https://github.com/vux427/Manapoint/archive/refs/heads/master.zip" -OutFile $tempZip -UseBasicParsing
+    # Source archives can carry an older checked-in collector. Releases always
+    # rebuild it alongside the GUI and provide a digest for the complete package.
+    $manifest = Invoke-RestMethod -Uri "https://github.com/vux427/Manapoint/releases/latest/download/manifest.json"
+    if (-not $manifest.win.url -or -not $manifest.win.sha256) { throw 'Release manifest is missing the Windows package' }
+    Invoke-WebRequest -Uri $manifest.win.url -OutFile $tempZip -UseBasicParsing
+    $actualHash = (Get-FileHash $tempZip -Algorithm SHA256).Hash
+    if ($actualHash -ine $manifest.win.sha256) { throw 'Release package SHA-256 verification failed' }
     Expand-Archive -Path $tempZip -DestinationPath $tempDirToClean -Force
-    $scriptDir = Join-Path $tempDirToClean 'Manapoint-master\herdr-mod'
+    $scriptDir = Join-Path $tempDirToClean 'Manapoint\herdr-mod'
+    if (-not (Test-Path (Join-Path $scriptDir 'mods\manapoint-status\bin\manapoint-cli.exe'))) {
+      throw 'Release package is missing the Herdr collector'
+    }
     Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
   } catch {
     throw "Failed to download mod archive from GitHub: $_"

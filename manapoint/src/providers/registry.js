@@ -3,6 +3,7 @@
 import * as antigravity from "./antigravity.js";
 import * as claude from "./claude.js";
 import * as codex from "./codex.js";
+import * as cursor from "./cursor.js";
 import * as grok from "./grok.js";
 import * as muse from "./muse.js";
 import * as opencodeGo from "./opencode_go.js";
@@ -68,6 +69,13 @@ const PROVIDERS = [
     credentialHint: "Muse Code CLI 登入狀態（muse login）",
     badge: { icon: null, text: "M", background: "#0866FF", foreground: ON_DARK },
     collect: muse.collect,
+  },
+  {
+    id: "cursor",
+    name: cursor.PROVIDER_NAME,
+    credentialHint: "Cursor 桌面程式或 cursor-agent login 的本機登入",
+    badge: badge("Cursor", "#14120B", ON_DARK),
+    collect: cursor.collect,
   },
 ];
 

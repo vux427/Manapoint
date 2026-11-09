@@ -26,6 +26,21 @@ export function opencodeAuth() {
 export const claudeCredentials = () => home() + "/.claude/.credentials.json";
 export const codexAuth = () => home() + "/.codex/auth.json";
 
+/** Cursor CLI supports both current and legacy auth files across config homes. */
+export function cursorAuthPaths() {
+  const base = env("CURSOR_ACP_HOME_DIR")?.trim() || home();
+  const xdg = env("XDG_CONFIG_HOME")?.trim();
+  const dirs = [xdg ? norm(xdg) + "/cursor" : null, norm(base) + "/.config/cursor", norm(base) + "/.cursor"];
+  return [...new Set(dirs.filter(Boolean))].flatMap((dir) => [dir + "/cli-config.json", dir + "/auth.json"]);
+}
+
+/** Cursor's desktop login on Windows; Linux uses the XDG config home. */
+export function cursorStateDb() {
+  const appData = env("APPDATA")?.trim();
+  const xdg = env("XDG_CONFIG_HOME")?.trim();
+  return (appData ? norm(appData) : xdg ? norm(xdg) : home() + "/.config") + "/Cursor/User/globalStorage/state.vscdb";
+}
+
 /** Muse uses the file credential backend on Windows and Linux. */
 export function museAuth() {
   const override = env("MUSE_AUTH_PATH");

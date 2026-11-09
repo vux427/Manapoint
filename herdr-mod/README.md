@@ -1,6 +1,10 @@
 # Manapoint for Herdr Desktop
 
-把 Manapoint 的六家/七項 AI 訂閱額度（Claude Code、Codex、Grok、Antigravity Gemini、Antigravity 3P、Muse Code、opencode Go）直接內嵌在 [Herdr](https://herdr.dev) 桌面終端底部狀態列中。
+把 Manapoint 的七家/八項 AI 訂閱額度（Claude Code、Codex、Grok、Antigravity Gemini、Antigravity 3P、Muse Code、Cursor、opencode Go）直接內嵌在 [Herdr](https://herdr.dev) 桌面終端底部狀態列中。
+
+Cursor 顯示每月訂閱用量，請在設定啟用 Cursor。Release 套件包含由同版原始碼重建的獨立 CLI；
+遠端一鍵安裝會下載並校驗最新 release。從原始碼安裝時，需先以 Windows 發布流程重建 CLI，
+再將 `manapoint/dist/manapoint-cli.exe` 複製到 `herdr-mod/mods/manapoint-status/bin/`。
 
 ![Manapoint Herdr](https://raw.githubusercontent.com/vux427/Manapoint/master/docs/images/screenshot.webp)
 
