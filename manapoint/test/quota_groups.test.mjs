@@ -6,6 +6,8 @@ import { payload } from "../src/lib/local_api.js";
 import { alertsFor } from "../src/lib/alerts.js";
 import { windowKey } from "../src/lib/trend.js";
 import { collectRoutes } from "../src/lib/accounts.js";
+import { applyVisibility } from "../src/lib/cards.js";
+import { parse as parseClaude } from "../src/providers/claude.js";
 
 const windows = [
   { kind: "Rolling", percent: 0, resetsAt: null },
@@ -46,5 +48,26 @@ describe("independent quota groups in one card", () => {
       { label: "B", run: async () => reading("Argon") },
     ], "missing");
     assert.deepEqual(result.windows.map((window) => window.account), ["A", "B"]);
+  });
+});
+
+describe("Claude Fable weekly usage", () => {
+  it("preserves the scoped window through grouping, visibility, history, export, trends and alerts", () => {
+    const reading = parseClaude(JSON.stringify({
+      five_hour: { utilization: 66 }, seven_day: { utilization: 29 },
+      limits: [{ kind: "weekly_scoped", group: "weekly", percent: 51,
+        resets_at: "2026-11-20T00:59:59Z", scope: { model: { display_name: "Fable" } } }],
+    }), 0);
+    const claude = { id: "claude-code", name: reading.provider, windows: reading.windows };
+    const fable = reading.windows[2];
+    assert.deepEqual(quotaGroups(reading.windows).map((group) => group.name), [null, "Fable"]);
+    assert.deepEqual(compactWindows(reading.windows, ["Rolling", "Weekly", "Monthly"]), reading.windows);
+    assert.deepEqual(applyVisibility([claude], { "claude-code": ["Weekly"] })[0].windows, reading.windows.slice(1));
+    assert.deepEqual(snapshot([claude], 0).cards[0].windows[2], fable);
+    assert.deepEqual(payload([claude], 0).cards[0].windows[2], fable);
+    assert.notEqual(windowKey(claude.id, reading.windows[1]), windowKey(claude.id, fable));
+    assert.deepEqual(alertsFor(claude.name, reading.windows,
+      [reading.windows[0], { ...fable, percent: 82 }, reading.windows[1]]),
+    ["Claude Code Fable 每週額度已用 82%"]);
   });
 });

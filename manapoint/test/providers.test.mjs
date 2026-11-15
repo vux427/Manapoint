@@ -56,6 +56,52 @@ describe("Claude", () => {
     assert.throws(() => claude.parse(`{"five_hour":{"utilization":5,"resets_at":null}}`, at), /seven_day/);
     assert.throws(() => claude.parse(`{"five_hour":null,"seven_day":null}`, at));
   });
+
+  // Public OAuth limits[] shape, with percentages matching the /usage reference.
+  const scoped = (percent = 51, display_name = "Fable") => ({
+    kind: "weekly_scoped", group: "weekly", percent,
+    resets_at: "2026-11-20T08:59:59+08:00",
+    scope: { model: { id: null, display_name } },
+  });
+  const withLimits = (limits) => JSON.stringify({
+    five_hour: { utilization: 66, resets_at: "2026-11-16T06:59:59+08:00" },
+    seven_day: { utilization: 29, resets_at: "2026-11-20T08:59:59+08:00" },
+    limits,
+  });
+
+  it("keeps Fable weekly usage separate from all-model usage with its own reset", () => {
+    const u = claude.parse(withLimits([scoped()]), at);
+    assert.deepEqual(kinds(u), ["Rolling", "Weekly", "Weekly"]);
+    assert.deepEqual(u.windows.map((w) => w.percent), [66, 29, 51]);
+    assert.equal(u.windows[1].quotaGroup, undefined);
+    assert.deepEqual(u.windows[2], {
+      kind: "Weekly", percent: 51, resetsAt: "2026-11-20T00:59:59.000Z", quotaGroup: "Fable",
+    });
+  });
+
+  it("omits unavailable Fable usage instead of fabricating a zero", () => {
+    for (const limits of [undefined, null, {}, [], [null, {}, scoped(15, "Sonnet")]]) {
+      assert.deepEqual(claude.parse(withLimits(limits), at).windows.map((w) => w.percent), [66, 29]);
+    }
+  });
+
+  it("skips malformed scoped rows and unrelated limits without hiding valid Fable usage", () => {
+    const limits = [null, {}, scoped(true), scoped("51"), scoped(null),
+      { ...scoped(99), kind: "weekly_all" }, { ...scoped(98), group: "session" },
+      { ...scoped(97), scope: null }, scoped(96, "Fabled"), scoped(0)];
+    assert.equal(claude.parse(withLimits(limits), at).windows[2].percent, 0);
+    const overflow = withLimits([scoped()]).replace('"percent":51', '"percent":1e999');
+    assert.equal(claude.parse(overflow, at).windows.length, 2);
+  });
+
+  it("recognizes the Fable family once, with optional reset times", () => {
+    for (const name of ["Fable", "Fable 5.2", " claude-fable-5-2 "]) {
+      const first = { ...scoped(12.5, name), resets_at: null };
+      const u = claude.parse(withLimits([first, scoped(70)]), at);
+      assert.equal(u.windows.length, 3);
+      assert.deepEqual(u.windows[2], { kind: "Weekly", percent: 12.5, resetsAt: null, quotaGroup: "Fable" });
+    }
+  });
 });
 
 describe("Codex", () => {

@@ -72,7 +72,17 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
   `refresh_token`／`expires_in` 秒）
 - 請求：`GET https://api.anthropic.com/api/oauth/usage`，附
   `anthropic-beta: oauth-2025-04-20`
-- 提供 5 小時 / 每週 窗口，另有模型分軸的 scoped window（目前只取前兩者）
+- 提供 5 小時 / 每週總用量，另從 `limits[]` 取 Fable 的獨立每週額度：
+  `kind: "weekly_scoped"`、`group: "weekly"`，模型名稱為
+  `scope.model.display_name`（`Fable` 或帶版本的 Fable 名稱），用量為 `percent`
+  （已是 0–100，無須乘 100），重置時間為 `resets_at`。
+  轉為 `Weekly` ＋ `quotaGroup: "Fable"`，在 Claude 卡片下另列一行；
+  精簡主題使用第三欄，歷史紀錄、趨勢、提醒與 iCUE 保留此分組。
+  每週顯示開關同時控制總用量與 Fable；未回傳 Fable 時不顯示空額度，
+  畸形或重複的可選項目不影響總用量。
+  格式來源（2026-11-16 查閱）：
+  [Claude Code issue #93107](https://github.com/anthropics/claude-code/issues/93107)、
+  [CodexBar scoped weekly mapper](https://github.com/steipete/CodexBar/blob/main/Sources/CodexBarCore/Providers/Claude/ClaudeScopedWeeklyLimitMapper.swift)。
 - 本機 `expiresAt` 只當提示：到期前 5 分鐘主動換發並寫回同一個憑證檔
   （只動 `claudeAiOauth` 的三個 token 欄位，保留 scopes 等中繼資料）；
   用量 API 回 401/403 時再換發重試一次，仍失敗才顯示登入指示

@@ -1,4 +1,4 @@
-// Claude Code's five-hour and weekly usage.
+// Claude Code's five-hour, weekly and model-scoped Fable weekly usage.
 //
 // Routes, in priority order (see lib/accounts.js — the first that answers wins):
 //   1. Claude Code's own login (~/.claude/.credentials.json); see claude_token.js.
@@ -14,7 +14,7 @@ import { collectRoutes, labelled } from "../lib/accounts.js";
 import { exists, requestNoOrigin as request } from "../lib/io.js";
 import { freshToken, opencodeLogins } from "../lib/opencode_logins.js";
 import { claudeCredentials } from "../lib/paths.js";
-import { isObject, number, optionalIso } from "../lib/values.js";
+import { isNumber, isObject, number, optionalIso } from "../lib/values.js";
 import { accessToken, refreshForRetry, refreshToken } from "./claude_token.js";
 import { ROLLING, WEEKLY, usage, usageWindow } from "./model.js";
 
@@ -77,5 +77,18 @@ export function parse(json, collectedAt) {
     // Claude returns a null reset time for some windows.
     return usageWindow(kind, number(w, "utilization", "Claude usage"), optionalIso(w, "resets_at"));
   });
+
+  // Fable's included weekly allowance lives in limits[], alongside the legacy
+  // account-wide windows. It is optional and already expressed as a percentage.
+  // Ignore malformed siblings and take the first valid Fable row to avoid drawing
+  // the same pool twice. Versioned Fable labels still identify the family pool.
+  const fable = (Array.isArray(root.limits) ? root.limits : []).find((limit) =>
+    limit?.kind === "weekly_scoped" && limit.group === "weekly" &&
+    typeof limit.scope?.model?.display_name === "string" &&
+    /^(?:claude[-\s]+)?fable\b/i.test(limit.scope.model.display_name.trim()) &&
+    isNumber(limit.percent));
+  if (fable) {
+    windows.push({ ...usageWindow(WEEKLY, fable.percent, optionalIso(fable, "resets_at")), quotaGroup: "Fable" });
+  }
   return usage(PROVIDER_NAME, windows, collectedAt);
 }
