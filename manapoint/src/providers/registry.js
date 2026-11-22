@@ -24,7 +24,7 @@ const PROVIDERS = [
   {
     id: "opencode-go",
     name: "opencode Go",
-    credentialHint: "opencode CLI 登入狀態",
+    credentialHint: "Go 金鑰或 OpenCode Console 登入",
     badge: badge("OpenCode", "#F2F2F2", ON_LIGHT),
     collect: opencodeGo.collect,
   },
@@ -45,7 +45,7 @@ const PROVIDERS = [
   {
     id: "grok",
     name: "Grok",
-    credentialHint: "opencode 的 xAI 登入",
+    credentialHint: "Pi 或 OpenCode 的 xAI 訂閱登入",
     badge: badge("Grok", "#1A1A1A", ON_DARK),
     collect: grok.collect,
   },

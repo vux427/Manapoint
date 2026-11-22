@@ -1,14 +1,21 @@
 # Provider 取數對照表
 
 六家 AI 訂閱的用量來源，共七張卡（Antigravity 的兩個額度池各一張）。
-全部讀本機既有的登入憑證，不需要另外申請 API key，不需要帳號密碼。
-所有 endpoint 皆為非公開介面，可能隨對方改版而失效。
+優先使用本機既有的登入，不要求帳號密碼。也可為 Go 指定已有訂閱的 workspace 金鑰。
+所有用量 endpoint 皆為非公開介面，可能隨對方改版而失效。
+
+## 不安裝 OpenCode 也能取數
+
+- **Grok / Pi**：在 Pi 執行 `/login`，選 xAI 訂閱（SuperGrok 或 X Premium），不是 `XAI_API_KEY`。Manapoint 可在沒有 Pi 視窗時以 Node.js 呼叫 Pi SDK；SDK 負責續期及鎖定寫回，Manapoint 不複製 token。自動模式保留 OpenCode 相容來源；只有同一個 xAI 帳號才會合併，不靠額度的百分比猜測。設 `MANAPOINT_GROK_SOURCE=pi` 可跳過 OpenCode，或設為 `opencode` 只使用舊路線。
+- **Go / 直連**：Manapoint 讀取 `MANAPOINT_OPENCODE_GO_API_KEY`，未設才使用 `OPENCODE_API_KEY`（亦為 Pi 支援的變數）。這把 key 必須能讀到目標 workspace 的 Go 訂閱額度；Zen-only 或失效的 key 不行。設 `MANAPOINT_GO_SOURCE=direct` 可完全不讀 OpenCode 檔案。若唯一可用的路線是 OpenCode Console OAuth，先保留原始登入，避免卸載後失去監測。
+- **Pi 路徑**：支援 Windows 的 Pi 1.6 managed 安裝和標準使用者 npm 安裝。自訂位置可用 `PI_CODING_AGENT_DIR`（Pi 帳號目錄）、`MANAPOINT_PI_SDK_ENTRY`（Pi coding-agent SDK 的絕對入口檔路徑）和 `MANAPOINT_NODE_EXE`（Node.js 的絕對執行檔路徑）。修改環境變數後須重新啟動 Manapoint 或其宿主。
+- **移除前實測**：在 repo 根目錄執行 `node scripts/check-without-opencode.mjs`（需已安裝 tinyjs，亦可用 `MANAPOINT_TJS_EXE` 指定 `tjs.exe`）。腳本用空白 profile 和不含 OpenCode 的搜尋路徑跑實際 collector，使用目前的 Pi 授權與 Go 環境金鑰，不看快取、不續期、不刪檔。兩張卡都有新窗口才回傳成功；仍須比對 workspace／帳號與原來相同再卸載。
 
 ## opencode Go
 
 已驗證（2026-09-05）。
 
-- 憑證（依序讀取，同一把 key 只算一個帳號）：
+- 憑證（同一把 key 只算一條金鑰路線；可確認同 workspace 的 Console 登入合併）：
   - `opencode.db` 的 `credential` 表（新版 opencode 把登入都存在這裡，auth.json 不再更新）
     裡 `integration_id = 'opencode'` 或 `'opencode-go'` 的列：console 登入（裝置碼 OAuth，
     `value = { type:'oauth', access, refresh, expires, metadata:{ server, accountID, email, orgID, orgName } }`）
@@ -19,6 +26,7 @@
     該 workspace 沒有 Go 訂閱時回 **403**（`EntitlementError`），面板顯示「此帳號沒有 Go 訂閱」而非錯誤
   - `~/.config/opencode/opencode-go-accounts.json`（opencode-go-multi-auth 外掛：
     `{ version: 1, accounts: [{ apiKey, label, enabled }] }`，`enabled: false` 略過）
+  - `MANAPOINT_OPENCODE_GO_API_KEY` 或 `OPENCODE_API_KEY`（不需要 OpenCode 安裝或資料目錄）
 - console 帳號的用量不在 `/zen`（實測 2026-09-26）：
   1. `GET {server}/api/config`（`Authorization: Bearer <console access>`、`x-org-id: <orgID>`）
      回 `config.provider["opencode-go"]`：`api` = `https://opencode.ai/inference/go/openai/v1`、
@@ -122,9 +130,7 @@ CLI 本身也不輪詢配額，只在撞上限時處理 `account_rate_limit` 錯
 
 已驗證（2026-09-05，credits 形狀 2026-09-06）。
 
-- 憑證：`~/.local/share/opencode/auth.json` → `xai.access`
-  **不需要安裝 Grok CLI**——opencode 的 xAI OAuth token 可直接通到
-  grok.com 的帳務介面，這點是實測確認的。
+- 憑證：Pi 的 xAI 訂閱 OAuth（由本機 Pi SDK 解析與續期），或 OpenCode 的 `xai` 登入（SQLite 優先，其次舊 `auth.json`）。**不需要安裝 Grok CLI，也不必安裝 OpenCode 才能用 Pi 路線。**
 - 請求：`GET https://cli-chat-proxy.grok.com/v1/billing?format=credits`
 - 認證：`Authorization: Bearer <access>`
   加 `x-xai-token-auth: xai-grok-cli` 與 `accept: application/json`

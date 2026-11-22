@@ -70,8 +70,7 @@ The other themes give each provider its own column, header on top:
 
 - Muse Code: reads the local `muse login` credential and shows five-hour and weekly quota. Enable it in settings; missing quota and expired logins get explicit messages.
 - Cursor: reads local Cursor CLI or desktop sign-in and shows monthly subscription usage and the billing reset, with multiple accounts and separate Auto/API pools when reported. Existing users can enable Cursor in settings. Validated against upstream sources and synthetic responses; not yet verified with a live subscription.
-- Reads the login state your CLIs already have. No API key required, supported OAuth tokens are
-  refreshed automatically, and no credential is ever written out
+- Uses existing local CLI logins or an optional Go workspace key. Grok can use Pi's xAI subscription login without installing OpenCode; see [source setup and uninstall preflight](docs/providers.md#不安裝-opencode-也能取數).
 - Five panel themes: Graphite, Vitals, Terminal, Compact, Paper
 - Vertical and horizontal arrangements, each theme designed for both (the Compact theme
   collapses to a single row when horizontal)

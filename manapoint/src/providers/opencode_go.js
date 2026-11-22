@@ -1,7 +1,8 @@
 // opencode Go's rolling, weekly and monthly windows, for every opencode account on
 // this machine.
 //
-// Uses keys the opencode tooling already stores; this app never asks for one:
+// Accepts an agent-independent key or existing OpenCode logins:
+//   - MANAPOINT_OPENCODE_GO_API_KEY, otherwise OPENCODE_API_KEY (also used by Pi)
 //   - auth.json "opencode-go"  — `opencode auth login` → OpenCode Go
 //   - auth.json "opencode"     — `opencode auth login` → OpenCode (Zen / console key).
 //     Same key table as Go on the server, so it answers /zen/go/v1/usage too; a
@@ -21,7 +22,7 @@
 
 import { failed, notReady, parseJson, statusError, transient } from "../lib/errors.js";
 import { collectRoutes, labelled } from "../lib/accounts.js";
-import { exists, readText, request } from "../lib/io.js";
+import { env, exists, readText, request } from "../lib/io.js";
 import * as opencodeDb from "../lib/opencode_db.js";
 import { home, opencodeAuth } from "../lib/paths.js";
 import { isInteger, isObject, iso, number, parseDatetime, str } from "../lib/values.js";
@@ -39,8 +40,8 @@ const WINDOW_MAP = [
 
 export async function collect() {
   const accounts = await readAccounts();
-  const routes = accounts.map((a) => ({ label: a.label, run: () => collectOne(a) }));
-  return collectRoutes(PROVIDER_NAME, routes, "尚未登入 opencode Go 或 opencode（Zen／console）");
+  const routes = accounts.map((a) => ({ label: a.label, identity: a.identity, run: () => collectOne(a) }));
+  return collectRoutes(PROVIDER_NAME, routes, "尚未設定 Go 金鑰或 OpenCode Console 登入", { matchWindows: false });
 }
 
 async function collectOne(account) {
@@ -55,7 +56,9 @@ async function collectOne(account) {
     throw notReady(
       typeof account.refresh === "function"
         ? "opencode console 登入已失效，請重新執行 opencode auth login"
-        : "金鑰已失效，請在 opencode 重新登入",
+        : account.direct
+          ? "Go 金鑰已失效，請更新環境變數中的金鑰"
+          : "金鑰已失效，請在 opencode 重新登入",
     );
   }
   if (res.status < 200 || res.status >= 300) throw statusError(res.status, res.text);
@@ -91,6 +94,9 @@ const tryJson = (text) => {
 };
 
 async function readAccounts() {
+  const key = str(env("MANAPOINT_OPENCODE_GO_API_KEY")) ?? str(env("OPENCODE_API_KEY"));
+  const direct = key ? [{ key, label: "Go 金鑰", direct: true }] : [];
+  if (env("MANAPOINT_GO_SOURCE")?.trim().toLowerCase() === "direct") return direct;
   const [authText, pluginText, consoleRows, goRows] = await Promise.all([
     readText(opencodeAuth()),
     readText(multiAuthFile()),
@@ -100,12 +106,12 @@ async function readAccounts() {
   const auth = tryJson(authText);
   const plugin = tryJson(pluginText);
   const consoleKeys = await Promise.all([...consoleRows, ...goRows].map(keyFromRow));
-  const accounts = accountsFrom(auth, plugin, consoleKeys.filter(Boolean));
+  const accounts = accountsFrom(auth, plugin, consoleKeys.filter(Boolean), direct);
   if (accounts.length > 0) return accounts;
 
   // Nothing usable anywhere: say which step is missing.
   const haveDb = await exists(opencodeDb.dbPath());
-  if (authText === null && pluginText === null && !haveDb) throw notReady("找不到 opencode，請先安裝並登入");
+  if (authText === null && pluginText === null && !haveDb) throw notReady("尚未設定 Go 金鑰或 OpenCode Console 登入");
   if (auth === undefined) throw notReady("opencode 憑證檔讀不懂，請重新登入");
   if (isObject(auth?.["opencode-go"]) || isObject(auth?.opencode)) {
     throw notReady("opencode 的登入資料不完整，請重新登入");
@@ -149,6 +155,7 @@ async function keyFromRow(row) {
       url: route.url,
       headers: route.headers,
       label,
+      identity: workspaceIdentity(v),
       refresh: str(v.refresh) ? () => refreshConsoleAccount(row) : null,
     };
   } catch (err) {
@@ -172,6 +179,7 @@ export function consoleLabel(v, rowLabel) {
 }
 
 const serverOf = (v) => str(isObject(v.metadata) ? v.metadata.server : null) ?? CONSOLE_SERVER;
+const workspaceIdentity = (v) => str(v.metadata?.orgID) ? JSON.stringify([serverOf(v), v.metadata.orgID]) : undefined;
 
 /** The console access token, refreshed (and written back) when spent. */
 async function consoleAccess(row) {
@@ -249,16 +257,16 @@ export function consoleUsageRoute(config) {
  * auth.json so a stale key left in auth.json never masks or outranks a console login.
  * Pure.
  */
-export function accountsFrom(auth, plugin, consoleKeys = []) {
+export function accountsFrom(auth, plugin, consoleKeys = [], direct = []) {
   const found = [];
-  const add = (key, label, headers = {}, url = null, refresh = null) => {
+  const add = (key, label, { headers = {}, url = null, refresh, direct, identity } = {}) => {
     const k = str(key)?.trim();
-    if (k && !found.some((a) => a.key === k)) {
-      found.push({ key: k, label, headers, url, ...(refresh ? { refresh } : {}) });
+    if (k && !found.some((a) => a.key === k && a.identity === identity)) {
+      found.push({ key: k, label, headers, url, ...(refresh ? { refresh } : {}), ...(direct ? { direct } : {}), ...(identity ? { identity } : {}) });
     }
   };
   for (const c of consoleKeys) {
-    if (c.key) add(c.key, c.label, c.headers, c.url, c.refresh);
+    if (c.key) add(c.key, c.label, c);
     else if (c.error) found.push({ error: c.error, label: c.label ?? "Console" });
   }
   if (isObject(auth)) {
@@ -270,5 +278,6 @@ export function accountsFrom(auth, plugin, consoleKeys = []) {
       .filter((a) => isObject(a) && a.enabled !== false)
       .forEach((a) => add(a.apiKey, str(a.label)?.trim() ?? null));
   }
+  for (const d of direct) add(d.key, d.label, d);
   return labelled(found, "帳號");
 }

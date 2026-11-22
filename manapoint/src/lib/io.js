@@ -139,14 +139,46 @@ const curlQuote = (s) =>
     .join(BACKSLASH + '"') +
   '"';
 
-async function readAll(stream) {
+async function readAll(stream, limit = Infinity) {
   const reader = stream.getReader();
   const dec = new TextDecoder();
   let out = "";
+  let size = 0;
   for (;;) {
     const { value, done } = await reader.read();
-    if (done) return out;
+    if (done) return out + dec.decode();
+    size += value.byteLength;
+    if (size > limit) throw transient("本機用量來源回應過大");
     out += dec.decode(value, { stream: true });
+  }
+}
+
+/** A bundled, trusted probe. No shell, and stderr may contain SDK internals: discard it. */
+export async function runLocalProbe(argv, input, cwd) {
+  let proc;
+  let timer;
+  const kill = () => { try { proc?.kill(); } catch {} };
+  try {
+    proc = spawner(argv, { cwd, stdin: "pipe", stdout: "pipe", stderr: "ignore" });
+    const writer = proc.stdin.getWriter();
+    const send = async () => {
+      await writer.write(enc.encode(input));
+      await writer.close();
+    };
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(transient("本機用量來源逾時")), 20_000);
+    });
+    const [text, status] = await Promise.race([
+      Promise.all([readAll(proc.stdout, 16_384), proc.wait(), send()]),
+      timeout,
+    ]);
+    if (status.exit_status !== 0) throw transient("本機用量來源執行失敗");
+    return text;
+  } catch {
+    kill();
+    throw transient("本機用量來源無法讀取，請確認 Agent 與 Node.js 可用");
+  } finally {
+    clearTimeout(timer);
   }
 }
 

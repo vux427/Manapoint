@@ -1,7 +1,7 @@
 // Grok's weekly credit pool, plus a monthly window for accounts that cap spend.
 //
-// Credentials come from the xAI OAuth login opencode already stores, so no Grok CLI
-// is needed. On some accounts the opencode grant reports a monthly limit of zero while
+// xAI OAuth can come from Pi or OpenCode; no Grok CLI is needed.
+// On some accounts the grant reports a monthly limit of zero while
 // the credit pool has real numbers — hence `?format=credits`. SuperGrok (unified
 // billing) accounts expose the weekly pool either as a top-level `creditUsagePercent`
 // or per product in `productUsage[].usagePercent`; xAI omits zero-valued percentage
@@ -9,18 +9,27 @@
 // pool), not as "no quota". Expired tokens are refreshed; see xai_token.js.
 
 import { notReady, parseJson, statusError } from "../lib/errors.js";
-import { request } from "../lib/io.js";
-import { clamp, isNumber, isObject, iso, object, parseDatetime } from "../lib/values.js";
+import { env, request } from "../lib/io.js";
+import { clamp, isNumber, isObject, iso, jwtClaims, object, parseDatetime, str } from "../lib/values.js";
 import { MONTHLY, WEEKLY, usage, usageWindow } from "./model.js";
-import { collectRoutes } from "../lib/accounts.js";
+import { collectRoutes, discoverRoutes } from "../lib/accounts.js";
+import { piGrokRoutes } from "../sources/pi.js";
 import { accessToken, listAccounts } from "./xai_token.js";
 
 export const PROVIDER_NAME = "Grok";
 const BILLING_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
 
-export async function collect() {
-  const routes = (await listAccounts()).map((a) => ({ label: a.label, run: () => collectOne(a) }));
-  return collectRoutes(PROVIDER_NAME, routes, "尚未登入 xAI，請在 opencode 登入");
+export async function collect({ piReadOnly = false } = {}) {
+  const setting = env("MANAPOINT_GROK_SOURCE")?.trim().toLowerCase();
+  const selection = setting === "pi" || setting === "opencode" ? setting : "auto";
+  const routes = await discoverRoutes([
+    // Keep existing labels/order for accounts seen via more than one source.
+    { id: "opencode", label: "OpenCode", discover: async () => (await listAccounts()).map((a) => ({
+      label: a.label, run: () => collectOne(a),
+    })) },
+    { id: "pi", label: "Pi", discover: () => piGrokRoutes(parse, { readOnly: piReadOnly }) },
+  ], selection);
+  return collectRoutes(PROVIDER_NAME, routes, "尚未登入 xAI，請在 Pi 或 OpenCode 登入 xAI 訂閱", { matchWindows: false });
 }
 
 async function collectOne(account) {
@@ -36,8 +45,11 @@ async function collectOne(account) {
   if (res.status === 401 || res.status === 403) {
     throw notReady("登入已失效，請在 opencode 重新登入 xAI");
   }
-  if (res.status < 200 || res.status >= 300) throw statusError(res.status, res.text);
-  return parse(res.text, Date.now());
+  if (res.status < 200 || res.status >= 300) throw statusError(res.status);
+  // Only use identity once the billing server has accepted the presented token.
+  const claims = jwtClaims(token);
+  const identity = str(claims?.iss) && str(claims?.sub) ? JSON.stringify([claims.iss, claims.sub]) : undefined;
+  return { ...parse(res.text, Date.now()), identity };
 }
 
 /**

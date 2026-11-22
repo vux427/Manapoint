@@ -14,7 +14,7 @@
 
 import { failed, notReady, transient } from "../lib/errors.js";
 import { labelled } from "../lib/accounts.js";
-import { exists, readText, replaceText, request } from "../lib/io.js";
+import { readText, replaceText, request } from "../lib/io.js";
 import * as opencodeDb from "../lib/opencode_db.js";
 import { opencodeAuth } from "../lib/paths.js";
 import { isBlank, isInteger, isObject, str } from "../lib/values.js";
@@ -40,8 +40,7 @@ export async function listAccounts() {
   const legacy = await readFileEntry(path);
   if (legacy) return [{ ...legacy, label: "xAI", store: { kind: "file", path } }];
 
-  const haveOpencode = (await exists(opencodeDb.dbPath())) || (await exists(path));
-  throw notReady(haveOpencode ? "尚未登入 xAI，請在 opencode 登入" : "找不到 opencode，請先安裝並登入 xAI");
+  return [];
 }
 
 /** A usable access token for `account`, refreshing and persisting first if spent. */

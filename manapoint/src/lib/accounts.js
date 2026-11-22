@@ -34,9 +34,20 @@ const fingerprint = (u) =>
  * email), or — when either cannot tell — the numbers match. Two accounts showing the
  * same percentages AND the same reset minutes is not a coincidence worth designing for.
  */
-function sameAccount(a, b) {
+function sameAccount(a, b, matchWindows) {
   if (a.identity && b.identity) return a.identity === b.identity;
-  return fingerprint(a.usage) === fingerprint(b.usage);
+  return matchWindows && fingerprint(a.usage) === fingerprint(b.usage);
+}
+
+/** A source discovers zero or more account routes, not a new card. A broken
+ * discovery is one failed route and must not hide credentials from other sources. */
+export async function discoverRoutes(sources, selection = "auto") {
+  const enabled = sources.filter((s) => selection === "auto" || selection === s.id);
+  const outcomes = await Promise.allSettled(enabled.map(async (s) => s.discover()));
+  return outcomes.flatMap((o, i) => o.status === "fulfilled" ? o.value : [{
+    label: enabled[i].label,
+    run: async () => { throw o.reason; },
+  }]);
 }
 
 /**
@@ -44,7 +55,7 @@ function sameAccount(a, b) {
  * A reading may carry `identity` too, for routes that only learn it while running.
  * `missing` is the NotReady message when there is no route at all.
  */
-export async function collectRoutes(provider, routes, missing) {
+export async function collectRoutes(provider, routes, missing, { matchWindows = true } = {}) {
   if (routes.length === 0) throw notReady(missing);
 
   const outcomes = await Promise.allSettled(routes.map((r) => r.run()));
@@ -66,7 +77,7 @@ export async function collectRoutes(provider, routes, missing) {
 
   const distinct = [];
   for (const r of ok) {
-    const twin = distinct.find((d) => sameAccount(d, r));
+    const twin = distinct.find((d) => sameAccount(d, r, matchWindows));
     if (!twin) distinct.push(r);
     else if (!twin.identity && r.identity) twin.identity = r.identity;
   }
